@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* PTIT Dormitory Management System Design Tokens */
+
+@layer base {
+  :root {
+    /* PTIT Brand Colors */
+    --ptit-red: 350 77% 35%;        /* #B2001F - PTIT Deep Red */
+    --ptit-red-light: 350 77% 45%;  /* Lighter variant */
+    --ptit-red-dark: 350 77% 25%;   /* Darker variant */
+    
+    /* Background System */
+    --background: 0 0% 100%;         /* Pure white */
+    --foreground: 0 0% 15%;          /* Dark text */
+    --surface: 0 0% 98%;             /* Light surface */
+    --surface-hover: 0 0% 96%;       /* Hover surface */
+
+    /* PTIT Color System */
+    --primary: 350 77% 35%;          /* PTIT Red */
+    --primary-foreground: 0 0% 100%; /* White text on red */
+    --primary-hover: 350 77% 30%;    /* Darker red for hover */
+    
+    --secondary: 0 0% 96%;           /* Light gray */
+    --secondary-foreground: 0 0% 15%; /* Dark text */
+    
+    --accent: 350 77% 35%;           /* PTIT Red accent */
+    --accent-foreground: 0 0% 100%;  /* White text */
+    --accent-light: 350 77% 95%;     /* Very light red tint */
+
+    /* UI Elements */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 15%;
+    
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 90%;
+    --input: 0 0% 100%;
+    --input-border: 0 0% 85%;
+    --ring: 350 77% 35%;
+
+    /* PTIT Gradients */
+    --gradient-ptit: linear-gradient(135deg, hsl(var(--ptit-red)), hsl(var(--ptit-red-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--ptit-red)) 0%, hsl(var(--ptit-red-dark)) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface)) 100%);
+    
+    /* Shadows */
+    --shadow-ptit: 0 10px 30px -10px hsl(var(--ptit-red) / 0.3);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.08);
+    --shadow-modal: 0 20px 60px -20px hsl(0 0% 0% / 0.3);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
