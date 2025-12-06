@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 const WEBSOCKET_URL = "ws://localhost:8000/ws/chat";
 const BROADCAST_CHANNEL = "chatbot-channel";
 const LEADER_KEY = "chatbot-leader";
+const MESSAGES_KEY = "chatbot-messages";
 
 interface Message {
 	type: 'user' | 'bot';
@@ -13,6 +14,23 @@ let sharedConnection: WebSocket | null = null;
 let sharedMessages: Message[] = [];
 let sharedConnected = false;
 let connectionCount = 0;
+
+const loadMessagesFromStorage = () => {
+	const saved = localStorage.getItem(MESSAGES_KEY);
+	if (saved) {
+		try {
+			sharedMessages = JSON.parse(saved);
+		} catch (e) {
+			sharedMessages = [];
+		}
+	}
+};
+
+const saveMessagesToStorage = (messages: Message[]) => {
+	localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+};
+
+loadMessagesFromStorage();
 
 export const useWebSocketChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -51,9 +69,7 @@ export const useWebSocketChat = () => {
 		checkLeader();
 
 		const handleBeforeUnload = () => {
-			if (isLeader.current && sharedConnection) {
-				sharedConnection.close();
-				sharedConnection = null;
+			if (isLeader.current) {
 				localStorage.removeItem(LEADER_KEY);
 			}
 		};
@@ -72,15 +88,16 @@ export const useWebSocketChat = () => {
 			if (isLeader.current) {
 				isLeader.current = false;
 				localStorage.removeItem(LEADER_KEY);
+			}
 
-				if (connectionCount === 0) {
-					if (sharedConnection) {
-						sharedConnection.close();
-						sharedConnection = null;
-					}
-					sharedMessages = [];
-					sharedConnected = false;
+			if (connectionCount === 0) {
+				if (sharedConnection) {
+					sharedConnection.close();
+					sharedConnection = null;
 				}
+				sharedMessages = [];
+				sharedConnected = false;
+				localStorage.removeItem(MESSAGES_KEY);
 			}
 		};
 	}, []);
@@ -95,8 +112,15 @@ export const useWebSocketChat = () => {
       sharedConnection = new WebSocket(WEBSOCKET_URL);
 
       sharedConnection.onopen = () => {
-        sharedMessages = [{ type: 'bot', text: 'Chào bạn, tôi là Chatbot KTX. Tôi có thể giúp gì cho bạn?' }];
+        sharedMessages = sharedMessages.filter(msg => 
+          msg.text !== 'Hệ thống đang bảo trì, vui lòng đợi trong giây lát.'
+        );
         
+        if (sharedMessages.length === 0) {
+          sharedMessages = [{ type: 'bot', text: 'Chào bạn, tôi là Chatbot KTX. Tôi có thể giúp gì cho bạn?' }];
+        }
+        
+        saveMessagesToStorage(sharedMessages);
         setIsConnected(true);
         setMessages([...sharedMessages]);
         
@@ -114,6 +138,7 @@ export const useWebSocketChat = () => {
         const data = JSON.parse(event.data);
         if (data.answer) {
           sharedMessages = [...sharedMessages, { type: 'bot', text: data.answer }];
+          saveMessagesToStorage(sharedMessages);
           
           setMessages([...sharedMessages]);
           
@@ -125,10 +150,10 @@ export const useWebSocketChat = () => {
       };
 
       sharedConnection.onclose = () => {
-        sharedMessages = [...sharedMessages, { type: 'bot', text: 'Hệ thống đang bảo trì, vui lòng đợi trong giây lát.' }];
+        const errorMessage = { type: 'bot' as const, text: 'Hệ thống đang bảo trì, vui lòng đợi trong giây lát.' };
         
         setIsConnected(false);
-        setMessages([...sharedMessages]);
+        setMessages([...sharedMessages, errorMessage]);
         
         channelRef.current?.postMessage({
           type: 'CONNECTION_STATUS',
@@ -155,12 +180,11 @@ export const useWebSocketChat = () => {
     return () => clearInterval(heartbeat);
   }, []);
 
-  // Kết nối WebSocket
   const connect = useCallback(() => {
     becomeLeader();
   }, [becomeLeader]);
 
-  // Ngắt kết nối và reset toàn bộ state
+
   const disconnect = useCallback(() => {
     if (sharedConnection) {
       sharedConnection.close();
@@ -172,6 +196,7 @@ export const useWebSocketChat = () => {
     isLeader.current = false;
     
     localStorage.removeItem(LEADER_KEY);
+    localStorage.removeItem(MESSAGES_KEY);
     
     channelRef.current?.postMessage({
       type: 'CONNECTION_STATUS',
@@ -186,9 +211,9 @@ export const useWebSocketChat = () => {
     setMessages([]);
   }, []);
 
-  // Gửi tin nhắn và đồng bộ với các tab khác
   const sendMessage = useCallback((text: string) => {
     sharedMessages = [...sharedMessages, { type: 'user', text }];
+    saveMessagesToStorage(sharedMessages);
     
     setMessages([...sharedMessages]);
     
