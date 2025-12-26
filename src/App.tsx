@@ -21,6 +21,7 @@ import ManageEmployee from "./pages/pages-manager/ManageEmployee";
 import DutySchedule from "./pages/pages-manager/DutySchedule";
 import ContractList from "./pages/pages-manager/ContractList";
 import ElectricBillList from "./pages/pages-manager/ElectricBillList";
+import ChatbotButton from "./components/ui/chatbot-button";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,9 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+
+        <ChatbotButton />
+
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
