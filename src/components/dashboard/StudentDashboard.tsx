@@ -40,7 +40,12 @@ const events: Event[] = [
   },
 ];
 
-const StudentDashboard: React.FC<{ user: any }> = ({ user }) => (
+interface StudentUser {
+  display_name?: string;
+  // Add other user fields if needed
+}
+
+const StudentDashboard: React.FC<{ user: StudentUser }> = ({ user }) => (
   <>
     <WelcomeBanner name={user?.display_name || "Sinh viên"} />
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

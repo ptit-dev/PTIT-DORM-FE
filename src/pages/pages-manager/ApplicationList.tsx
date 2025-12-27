@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import dormData from "@/assets/data.json";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Eye, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getDormApplications, approveDormApplication } from "@/features/auth/api";
+import { getDormApplications, approveDormApplication, getApprovedContracts } from "@/features/auth/api";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 
@@ -46,11 +46,18 @@ interface DormApplication {
   updated_at: string;
 }
 
-const DORM_ROOMS: Record<string, string[]> = {
-  "Hà Đông": ["B1-101", "B1-102", "B2-201", "B5-301"],
-  "Ngọc Trục": ["B0-101", "B0-102"],
-  "Minh Khai": ["MK-101", "MK-102"],
-};
+interface DormConfig {
+  area_id: string;
+  rooms: string[];
+}
+
+interface RoomStat {
+  room: string;
+  residents: number;
+  max: number;
+  area_id: string;
+  floor: string;
+}
 
 
 
@@ -59,10 +66,22 @@ const ApplicationList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<DormApplication | null>(null);
   const [approveRoom, setApproveRoom] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [roomStats, setRoomStats] = useState<RoomStat[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
   const [approveLoading, setApproveLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+
+  const filteredRoomsForSelectedApplication = useMemo(() => {
+    if (!selected) return [] as RoomStat[];
+    // Lấy phòng đúng theo KTX mong muốn (preferred_dorm: B1, B2, B5, B0, ...)
+    const areaId = selected.preferred_dorm || "";
+    if (!areaId) return [] as RoomStat[];
+    return roomStats.filter((r) => r.area_id === areaId);
+  }, [roomStats, selected]);
 
   // Check user and role
   useEffect(() => {
@@ -76,10 +95,30 @@ const ApplicationList: React.FC = () => {
       try {
         const data = await getDormApplications();
         setApplications(data);
+        // Chuẩn bị thống kê phòng giống trang Quản lý phòng ở
+        setLoadingRooms(true);
+        setRoomsError(null);
+        const contracts = await getApprovedContracts();
+        const allRooms: RoomStat[] = [];
+        dormData.dorms.forEach((dorm: DormConfig) => {
+          const max = dorm.area_id === "B2" || dorm.area_id === "B5" ? 8 : 4;
+          dorm.rooms.forEach((room) => {
+            const [, code] = room.split("-");
+            const floor = code?.charAt(0) ?? "";
+            allRooms.push({ room, residents: 0, max, area_id: dorm.area_id, floor });
+          });
+        });
+        const roomMap: Record<string, number> = {};
+        contracts.forEach((c: { room: string }) => {
+          if (c.room) roomMap[c.room] = (roomMap[c.room] || 0) + 1;
+        });
+        const stats: RoomStat[] = allRooms.map((r) => ({ ...r, residents: roomMap[r.room] || 0 }));
+        setRoomStats(stats);
       } catch (e) {
         toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải danh sách nguyện vọng." });
       } finally {
         setLoading(false);
+        setLoadingRooms(false);
       }
     };
     fetchData();
@@ -88,11 +127,16 @@ const ApplicationList: React.FC = () => {
 
   const handleApprove = async () => {
     if (!selected) return;
+    if (!approveRoom) {
+      toast({ variant: "destructive", title: "Thiếu phòng", description: "Vui lòng chọn phòng để duyệt." });
+      return;
+    }
     setApproveLoading(true);
     try {
       await approveDormApplication(selected.id, approveRoom, "approved");
       toast({ title: "Duyệt thành công" });
       setSelected(null);
+      setStep(1);
       setApplications(applications => applications.map(a => a.id === selected.id ? { ...a, status: "approved" } : a));
     } catch (e) {
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể duyệt nguyện vọng." });
@@ -108,6 +152,7 @@ const ApplicationList: React.FC = () => {
       await approveDormApplication(selected.id, "", "rejected");
       toast({ title: "Đã hủy nguyện vọng" });
       setSelected(null);
+      setStep(1);
       setApplications(applications => applications.map(a => a.id === selected.id ? { ...a, status: "rejected" } : a));
     } catch (e) {
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể hủy nguyện vọng." });
@@ -159,13 +204,33 @@ const ApplicationList: React.FC = () => {
               </div>
             )}
             {/* Modal xem chi tiết và duyệt */}
-            <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+            <Dialog
+              open={!!selected}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelected(null);
+                  setStep(1);
+                  setApproveRoom("");
+                }
+              }}
+            >
               <DialogContent className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl text-red-700">Thông tin chi tiết đơn nguyện vọng</DialogTitle>
+                  <DialogTitle className="text-2xl text-red-700">
+                    {step === 1 ? "Thông tin chi tiết đơn nguyện vọng" : "Chọn phòng để duyệt đơn"}
+                  </DialogTitle>
                 </DialogHeader>
-                {selected && (
-                  <form className="space-y-6">
+                <div className="mt-2 flex items-center justify-center gap-2 text-sm">
+                  <span className={`px-3 py-1 rounded-full font-semibold ${step === 1 ? "bg-red-700 text-white" : "bg-gray-200 text-gray-700"}`}>
+                    Bước 1: Xem thông tin & chọn hành động
+                  </span>
+                  <span className={`px-3 py-1 rounded-full font-semibold ${step === 2 ? "bg-red-700 text-white" : "bg-gray-200 text-gray-700"}`}>
+                    Bước 2: Chọn phòng để duyệt
+                  </span>
+                </div>
+
+                {selected && step === 1 && (
+                  <form className="space-y-6 mt-4">
                     {/* Ảnh giấy tờ */}
                     <div className="flex flex-wrap gap-8 items-center justify-center mb-2">
                       {selected.avatar_front && (
@@ -294,32 +359,136 @@ const ApplicationList: React.FC = () => {
                       <label className="font-semibold">Ghi chú</label>
                       <Textarea value={selected.notes} readOnly disabled rows={2} />
                     </div>
-                    {/* Trạng thái và nút thao tác */}
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-end mt-6">
-                      {selected.status === "pending" && (
-                        <>
-                          <div className="flex-1 md:flex-none">
-                            <label className="font-semibold mr-2">Chọn phòng duyệt:</label>
-                            <Select value={approveRoom} onValueChange={setApproveRoom}>
-                              <SelectTrigger className="w-40"><SelectValue placeholder="Chọn phòng" /></SelectTrigger>
-                              <SelectContent>
-                                {(DORM_ROOMS[selected.preferred_site] || []).map(room => (
-                                  <SelectItem key={room} value={room}>{room}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <Button variant="destructive" onClick={handleApprove} disabled={!approveRoom || approveLoading} className="min-w-[120px]">
-                            {approveLoading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}Duyệt
-                          </Button>
-                          <Button variant="outline" onClick={handleReject} disabled={approveLoading} className="min-w-[120px]">Hủy</Button>
-                        </>
-                      )}
-                      {selected.status !== "pending" && (
+                    {selected.status === "pending" ? (
+                      <div className="flex flex-col md:flex-row gap-4 items-center justify-end mt-6">
+                        <Button
+                          variant="destructive"
+                          onClick={() => setStep(2)}
+                          className="min-w-[160px]"
+                          disabled={approveLoading}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" /> Duyệt đơn
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleReject}
+                          disabled={approveLoading}
+                          className="min-w-[120px]"
+                        >
+                          Hủy đơn
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end mt-6">
                         <div className="text-green-700 font-semibold">Đã xử lý</div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </form>
+                )}
+
+                {selected && step === 2 && (
+                  <div className="mt-6 space-y-5">
+                    <Card className="bg-red-50 border-red-100">
+                      <CardContent className="pt-4 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="text-sm text-gray-800 space-y-1">
+                          <div className="font-semibold text-red-700">
+                            Duyệt phòng cho: {selected.full_name} (Mã SV: {selected.student_id})
+                          </div>
+                          <div>
+                            Nguyện vọng: <span className="font-medium">{selected.preferred_site} - {selected.preferred_dorm}</span>
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            Chọn một phòng tại KTX {selected.preferred_dorm} phù hợp để duyệt cho sinh viên này.
+                          </div>
+                        </div>
+                        {approveRoom && (
+                          <div className="text-xs md:text-sm text-right text-gray-700">
+                            Phòng đang chọn: <span className="font-semibold text-red-700">{approveRoom}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {roomsError && (
+                      <div className="text-red-600 text-center text-sm">{roomsError}</div>
+                    )}
+                    {loadingRooms ? (
+                      <div className="text-gray-600 text-center text-sm">Đang tải danh sách phòng...</div>
+                    ) : filteredRoomsForSelectedApplication.length === 0 ? (
+                      <div className="text-gray-500 text-center text-sm">
+                        Chưa cấu hình danh sách phòng phù hợp với nguyện vọng này.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-80 overflow-y-auto pr-1">
+                        {filteredRoomsForSelectedApplication.map((room) => {
+                          const isSelectedRoom = approveRoom === room.room;
+                          const isFull = room.residents >= room.max;
+                          const variant = isFull ? "full" : room.residents === 0 ? "empty" : "partial";
+                          return (
+                            <button
+                              key={room.room}
+                              type="button"
+                              disabled={isFull}
+                              onClick={() => setApproveRoom(room.room)}
+                              className={`flex flex-col items-start rounded-xl border p-3 text-left transition shadow-sm text-xs md:text-sm ${
+                                isSelectedRoom
+                                  ? "border-red-500 bg-red-50 ring-1 ring-red-300"
+                                  : "bg-white hover:bg-red-50 hover:border-red-300"
+                              } ${isFull ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                            >
+                              <span className="text-[11px] text-gray-500 mb-1">KTX {room.area_id} - Tầng {room.floor}</span>
+                              <span className="text-base font-semibold text-gray-900">{room.room}</span>
+                              <span className="mt-1 text-[11px] text-gray-600">
+                                Số người: {room.residents}/{room.max}
+                              </span>
+                              <span
+                                className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                  variant === "full"
+                                    ? "bg-gray-200 text-gray-700"
+                                    : variant === "empty"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {variant === "full" ? "Đã đầy" : variant === "empty" ? "Trống" : "Còn chỗ"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setStep(1);
+                          setApproveRoom("");
+                        }}
+                        disabled={approveLoading}
+                      >
+                        Quay lại xem đơn
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={handleApprove}
+                        disabled={approveLoading || !approveRoom}
+                        className="min-w-[180px]"
+                      >
+                        {approveLoading ? (
+                          <>
+                            <Loader2 className="animate-spin w-4 h-4 mr-2" /> Đang duyệt...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-2" /> Xác nhận duyệt phòng {approveRoom}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </DialogContent>
             </Dialog>

@@ -21,7 +21,7 @@ const initialForm = {
 };
 
 const ManageEmployee: React.FC = () => {
-	const [managers, setManagers] = useState<any[]>([]);
+	const [managers, setManagers] = useState<{ [key: string]: unknown }[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [modalOpen, setModalOpen] = useState(false);
@@ -32,15 +32,18 @@ const ManageEmployee: React.FC = () => {
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
-	const token = localStorage.getItem("ptit_access_token") || "";
 
 	const fetchManagers = async () => {
 		setLoading(true);
 		try {
-			const res = await getManagers(token);
+			const res = await getManagers();
 			setManagers(res || []);
-		} catch (e: any) {
-			setError(e.message);
+		} catch (e: unknown) {
+			if (e instanceof Error) {
+				setError(e.message);
+			} else {
+				setError("Đã xảy ra lỗi không xác định.");
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -57,18 +60,18 @@ const ManageEmployee: React.FC = () => {
 		setAvatarFile(null);
 		setModalOpen(true);
 	};
-	const openEdit = (m: any) => {
-		setEditId(m.staff_id);
+	const openEdit = (m: { [key: string]: unknown }) => {
+		setEditId(m.staff_id as string);
 		setForm({
-			fullname: m.fullname,
-			phone: m.phone,
-			cccd: m.cccd,
-			dob: m.dob ? m.dob.slice(0, 10) : "",
-			province: m.province,
-			commune: m.commune,
-			detail_address: m.detail_address,
-			email: m.email,
-			username: m.username,
+			fullname: m.fullname as string,
+			phone: m.phone as string,
+			cccd: m.cccd as string,
+			dob: m.dob ? (m.dob as string).slice(0, 10) : "",
+			province: m.province as string,
+			commune: m.commune as string,
+			detail_address: m.detail_address as string,
+			email: m.email as string,
+			username: m.username as string,
 		});
 		setAvatarFile(null);
 		setModalOpen(true);
@@ -81,14 +84,18 @@ const ManageEmployee: React.FC = () => {
 		if (avatarFile) data.append("avatar", avatarFile);
 		try {
 			if (editId) {
-				await updateManager(editId, data, token);
+				await updateManager(editId, data);
 			} else {
-				await createManager(data, token);
+				await createManager(data);
 			}
 			setModalOpen(false);
 			fetchManagers();
-		} catch (e: any) {
-			alert(e.message);
+		} catch (e: unknown) {
+			if (e instanceof Error) {
+				alert(e.message);
+			} else {
+				alert("Đã xảy ra lỗi không xác định.");
+			}
 		} finally {
 			setSubmitting(false);
 		}
@@ -97,12 +104,16 @@ const ManageEmployee: React.FC = () => {
 		if (!deleteId) return;
 		setSubmitting(true);
 		try {
-			await deleteManager(deleteId, token);
+			await deleteManager(deleteId);
 			setDeleteId(null);
 			setConfirmDelete(false);
 			fetchManagers();
-		} catch (e: any) {
-			alert(e.message);
+		} catch (e: unknown) {
+			if (e instanceof Error) {
+				alert(e.message);
+			} else {
+				alert("Đã xảy ra lỗi không xác định.");
+			}
 		} finally {
 			setSubmitting(false);
 		}
@@ -133,21 +144,21 @@ const ManageEmployee: React.FC = () => {
 						) : (
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 								{managers.map((m) => (
-									<div key={m.staff_id} className="bg-white rounded-2xl shadow border border-gray-100 p-6 flex flex-col gap-3 hover:shadow-lg transition">
+									<div key={String(m.staff_id)} className="bg-white rounded-2xl shadow border border-gray-100 p-6 flex flex-col gap-3 hover:shadow-lg transition">
 										<div className="flex items-center gap-4">
 											<img
-												src={m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.fullname)}`}
-												alt={m.fullname}
+												src={String(m.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(String(m.fullname))}`}
+												alt={String(m.fullname)}
 												className="w-20 h-20 rounded-full object-cover border"
 											/>
 											<div className="flex-1 min-w-0">
-												<div className="font-semibold text-xl text-red-700 truncate">{m.fullname}</div>
-												<div className="text-gray-700 text-sm truncate">{m.email} <span className="ml-2 text-xs text-gray-400">({m.username})</span></div>
-												<div className="text-gray-500 text-xs">SĐT: {m.phone} | CCCD: {m.cccd}</div>
+												<div className="font-semibold text-xl text-red-700 truncate">{String(m.fullname)}</div>
+												<div className="text-gray-700 text-sm truncate">{String(m.email)} <span className="ml-2 text-xs text-gray-400">({String(m.username)})</span></div>
+												<div className="text-gray-500 text-xs">SĐT: {String(m.phone)} | CCCD: {String(m.cccd)}</div>
 											</div>
 										</div>
-										<div className="text-gray-500 text-xs mt-1">Địa chỉ: {m.detail_address}, {m.commune}, {m.province}</div>
-										<div className="text-gray-500 text-xs">Ngày sinh: {m.dob ? new Date(m.dob).toLocaleDateString() : ''}</div>
+										<div className="text-gray-500 text-xs mt-1">Địa chỉ: {String(m.detail_address)}, {String(m.commune)}, {String(m.province)}</div>
+										<div className="text-gray-500 text-xs">Ngày sinh: {m.dob ? new Date(m.dob as string).toLocaleDateString() : ''}</div>
 										<div className="flex gap-3 mt-2">
 											<button
 												className="px-4 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
@@ -157,7 +168,7 @@ const ManageEmployee: React.FC = () => {
 											</button>
 											<button
 												className="px-4 py-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-300"
-												onClick={() => { setDeleteId(m.staff_id); setConfirmDelete(true); }}
+												onClick={() => { setDeleteId(String(m.staff_id)); setConfirmDelete(true); }}
 											>
 												Xóa
 											</button>

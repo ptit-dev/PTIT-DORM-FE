@@ -4,18 +4,11 @@ import { LogIn, Home, User, LogOut } from "lucide-react";
 import LoginModal from "@/components/auth/LoginModal";
 import LogoutModal from "@/components/auth/LogoutModal";
 import ptitLogo from "@/assets/ptit-logo-new.png";
-
-interface User {
-  user_id: string;
-  username: string;
-  display_name: string;
-  email: string;
-  avatar?: string;
-  roles?: string[];
-}
+import type { User as UserType } from "@/model/User";
+import React from "react";
 
 interface HeaderProps {
-  user?: User | null;
+  user?: UserType | null;
   onMenuClick?: () => void;
 }
 
@@ -31,7 +24,7 @@ const Header = ({ user, onMenuClick }: HeaderProps) => {
   const copyTimeout = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
-  const handleLoginSuccess = (userData: User) => {
+  const handleLoginSuccess = (userData: UserType) => {
     setIsLoginOpen(false);
     // Handle successful login
     console.log("Login successful:", userData);

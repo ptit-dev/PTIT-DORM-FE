@@ -9,13 +9,16 @@ import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { login } from "@/features/auth/api";
 import { useNavigate } from "react-router-dom";
+
+
 import ptitCampusBg from "@/assets/ptit-campus-bg.jpg";
 import bannerLogo from "@/assets/banner-logo.jpg";
+import type { User } from "@/model/User";
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: any) => void;
+  onLoginSuccess: (user: User) => void;
 }
 
 const LoginModal = ({ isOpen, onClose, onLoginSuccess }: LoginModalProps) => {

@@ -2,7 +2,12 @@
 import React from "react";
 // import Dorm3D from "./Dorm3D";
 
-const GuestDashboard: React.FC<{ user: any }> = ({ user }) => {
+type User = {
+  display_name?: string;
+  // Add other properties if needed
+};
+
+const GuestDashboard: React.FC<{ user: User }> = ({ user }) => {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <p className="mb-2">Bạn đang đăng nhập với vai trò <b>guest</b>.</p>

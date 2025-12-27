@@ -1,3 +1,5 @@
+import { resolveElectricBillComplaint } from "@/features/auth/electricBillComplaintApi";
+
 import React, { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
@@ -6,6 +8,7 @@ import {
   createElectricBill,
   updateElectricBill,
   deleteElectricBill,
+  getElectricBillComplaints,
 } from "@/features/auth/electricBillApi";
 
 const paymentMap: Record<string, string> = {
@@ -46,44 +49,119 @@ const DORMS = [
   ]},
 ];
 
+type ElectricBill = {
+  id: string;
+  area_id?: string; // Added area_id to support form and logic
+  room_id: string;
+  month: string;
+  prev_electric: number | null;
+  curr_electric: number | null;
+  amount: number | null;
+  is_confirmed: boolean;
+  payment_status: 'unpaid' | 'paid';
+  payment_proof?: string;
+  // Add other fields as needed
+};
+
+type ElectricBillComplaint = {
+  id: string;
+  electric_bill_id: string;
+  student_name?: string;
+  student_id?: string;
+  note: string;
+  proof?: string;
+  created_at?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+};
+
 const ElectricBillList: React.FC = () => {
-  const [bills, setBills] = useState<any[]>([]);
+  const [bills, setBills] = useState<ElectricBill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ open: boolean; bill?: any; mode: 'add' | 'edit' }>({ open: false, mode: 'add' });
-  const [form, setForm] = useState<any>({
+  const [modal, setModal] = useState<{ open: boolean; bill?: ElectricBill; mode: 'add' | 'edit' }>({ open: false, mode: 'add' });
+  const [complaints, setComplaints] = useState<ElectricBillComplaint[]>([]);
+  const [complaintsLoading, setComplaintsLoading] = useState(false);
+  const [complaintsError, setComplaintsError] = useState<string | null>(null);
+      const [complaintActionLoading, setComplaintActionLoading] = useState<string | null>(null);
+    // Handle accept/reject complaint
+    const handleResolveComplaint = async (complaintId: string, status: 'accepted' | 'rejected') => {
+      setComplaintActionLoading(complaintId + status);
+      try {
+        await resolveElectricBillComplaint({ complaint_id: complaintId, status });
+        await fetchComplaints();
+        // Update modal complaints after action
+        if (complaintModal.bill) {
+          const updated = complaints.filter((c) => c.electric_bill_id === complaintModal.bill.id);
+          setComplaintModal((prev) => ({ ...prev, complaints: updated }));
+        }
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          alert(e.message);
+        } else {
+          alert("Đã xảy ra lỗi không xác định.");
+        }
+      } finally {
+        setComplaintActionLoading(null);
+      }
+    };
+  // Complaint modal state
+  const [complaintModal, setComplaintModal] = useState<{ open: boolean; bill?: ElectricBill; complaints?: ElectricBillComplaint[] }>({ open: false });
+  const [form, setForm] = useState<Partial<ElectricBill>>({
     area_id: '',
     room_id: '',
     month: '',
-    prev_electric: '',
-    curr_electric: '',
-    amount: '',
+    prev_electric: null,
+    curr_electric: null,
+    amount: null,
     is_confirmed: false,
     payment_status: '',
     payment_proof: '',
-  });
+  } as unknown as Partial<ElectricBill>);
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
-  const token = localStorage.getItem("ptit_access_token") || "";
   // Lấy danh sách phòng theo area_id
   const rooms = form.area_id ? (DORMS.find(d => d.area_id === form.area_id)?.rooms || []) : [];
+
 
   const fetchBills = async () => {
     setLoading(true);
     try {
-      const res = await getElectricBills(token);
+      const res = await getElectricBills();
       setBills(res || []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("Đã xảy ra lỗi không xác định.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchComplaints = async () => {
+    setComplaintsLoading(true);
+    try {
+      const res = await getElectricBillComplaints();
+      setComplaints(res || []);
+      setComplaintsError(null);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setComplaintsError(e.message);
+      } else {
+        setComplaintsError("Đã xảy ra lỗi không xác định.");
+      }
+    } finally {
+      setComplaintsLoading(false);
+    }
+  };
+
+
   useEffect(() => {
     fetchBills();
+    fetchComplaints();
     // eslint-disable-next-line
   }, []);
 
@@ -93,15 +171,15 @@ const ElectricBillList: React.FC = () => {
       area_id: '',
       room_id: '',
       month: '',
-      prev_electric: '',
-      curr_electric: '',
-      amount: '',
+      prev_electric: null,
+      curr_electric: null,
+      amount: null,
       is_confirmed: false,
       payment_status: 'unpaid', // để rỗng
       payment_proof: '',
     });
   };
-  const openEdit = (bill: any) => {
+  const openEdit = (bill: ElectricBill) => {
     setModal({ open: true, bill, mode: 'edit' });
     setForm({ ...bill });
   };
@@ -112,18 +190,22 @@ const ElectricBillList: React.FC = () => {
       // Không gửi area_id khi gọi API, ép kiểu số cho các trường số
       const submitData = { ...form };
       delete submitData.area_id;
-      submitData.prev_electric = form.prev_electric === '' ? null : parseInt(form.prev_electric, 10);
-      submitData.curr_electric = form.curr_electric === '' ? null : parseInt(form.curr_electric, 10);
-      submitData.amount = form.amount === '' ? null : parseInt(form.amount, 10);
+      submitData.prev_electric = String(form.prev_electric) === '' || form.prev_electric === null ? null : parseInt(String(form.prev_electric), 10);
+      submitData.curr_electric = String(form.curr_electric) === '' || form.curr_electric === null ? null : parseInt(String(form.curr_electric), 10);
+      submitData.amount = String(form.amount) === '' || form.amount === null ? null : parseInt(String(form.amount), 10);
       if (modal.mode === 'add') {
-        await createElectricBill(submitData, token);
+        await createElectricBill(submitData);
       } else if (modal.mode === 'edit' && modal.bill) {
-        await updateElectricBill(modal.bill.id, submitData, token);
+        await updateElectricBill(modal.bill.id, submitData);
       }
       setModal({ open: false, mode: 'add' });
       fetchBills();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message);
+      } else {
+        alert("Đã xảy ra lỗi không xác định.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -132,12 +214,16 @@ const ElectricBillList: React.FC = () => {
     if (!deleteId) return;
     setSubmitting(true);
     try {
-      await deleteElectricBill(deleteId, token);
+      await deleteElectricBill(deleteId);
       setDeleteId(null);
       setConfirmDelete(false);
       fetchBills();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message);
+      } else {
+        alert("Đã xảy ra lỗi không xác định.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -181,29 +267,100 @@ const ElectricBillList: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {bills.map((b) => (
-                      <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 transition">
-                        <td className="p-4 font-semibold text-red-700">{b.room_id}</td>
-                        <td className="p-4">{b.month}</td>
-                        <td className="p-4">{b.prev_electric}</td>
-                        <td className="p-4">{b.curr_electric}</td>
-                        <td className="p-4">{b.amount?.toLocaleString()}đ</td>
-                        <td className="p-4">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${b.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{paymentMap[b.payment_status]}</span>
-                        </td>
-                        <td className="p-4 text-center">
-                          {b.is_confirmed ? <span className="text-green-600 font-bold">✔</span> : <span className="text-gray-400">Chưa</span>}
-                        </td>
-                        <td className="p-4 text-center">
-                          <button className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 mr-2" onClick={() => openEdit(b)}>
-                            Sửa
-                          </button>
-                          <button className="px-3 py-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-300" onClick={() => { setDeleteId(b.id); setConfirmDelete(true); }}>
-                            Xóa
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {bills.map((b) => {
+                      const billComplaints = complaints.filter((c) => c.electric_bill_id === b.id);
+                      return (
+                        <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 transition">
+                          <td className="p-4 font-semibold text-red-700">{b.room_id}</td>
+                          <td className="p-4">{b.month}</td>
+                          <td className="p-4">{b.prev_electric}</td>
+                          <td className="p-4">{b.curr_electric}</td>
+                          <td className="p-4">{b.amount?.toLocaleString()}đ</td>
+                          <td className="p-4">
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${b.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{paymentMap[b.payment_status]}</span>
+                          </td>
+                          <td className="p-4 text-center">
+                            {b.is_confirmed ? <span className="text-green-600 font-bold">✔</span> : <span className="text-gray-400">Chưa</span>}
+                          </td>
+                          <td className="p-4 text-center flex flex-col gap-1 items-center">
+                            <button className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 mr-2" onClick={() => openEdit(b)}>
+                              Sửa
+                            </button>
+                            <button className="px-3 py-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-300" onClick={() => { setDeleteId(b.id); setConfirmDelete(true); }}>
+                              Xóa
+                            </button>
+                            <button
+                              className="px-3 py-1 rounded bg-yellow-500 text-white text-xs font-semibold hover:bg-yellow-600 mt-1"
+                              disabled={billComplaints.length === 0}
+                              onClick={() => setComplaintModal({ open: true, bill: b, complaints: billComplaints })}
+                            >
+                              Xem khiếu nại ({billComplaints.length})
+                            </button>
+                                    {/* Modal xem khiếu nại hóa đơn */}
+                                    {complaintModal.open && (
+                                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                                        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-8 relative">
+                                          <button
+                                            className="absolute top-3 right-3 text-gray-400 hover:text-red-600 text-2xl font-bold"
+                                            onClick={() => setComplaintModal({ open: false })}
+                                            aria-label="Đóng"
+                                          >×</button>
+                                          <h3 className="text-xl font-bold text-yellow-700 mb-4 text-center">Khiếu nại hóa đơn phòng {complaintModal.bill?.room_id} ({complaintModal.bill?.month})</h3>
+                                          {complaintModal.complaints && complaintModal.complaints.length > 0 ? (
+                                            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                                              {complaintModal.complaints.map((c, idx) => (
+                                                <div key={c.id} className="border rounded-lg p-4 bg-gray-50">
+                                                  <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-semibold text-gray-700">#{idx + 1} - {c.student_name || c.student_id}</span>
+                                                    <span className={`text-xs px-2 py-1 rounded ${c.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : c.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                      {c.status === 'pending' ? 'Chờ xử lý' : c.status === 'accepted' ? 'Đã chấp nhận' : 'Đã từ chối'}
+                                                    </span>
+                                                  </div>
+                                                  <div className="mb-2"><span className="font-medium">Nội dung:</span> {c.note}</div>
+                                                  {c.proof && (
+                                                    <div className="mb-2">
+                                                      <span className="font-medium">Ảnh minh chứng:</span><br />
+                                                      <a href={c.proof} target="_blank" rel="noopener noreferrer">
+                                                        <img src={c.proof} alt="Ảnh minh chứng khiếu nại" className="max-h-40 mt-1 rounded border" />
+                                                      </a>
+                                                    </div>
+                                                  )}
+                                                  {c.created_at && <div className="text-xs text-gray-400">Gửi lúc: {new Date(c.created_at).toLocaleString()}</div>}
+                                                  {/* Action buttons for manager */}
+                                                  {c.status === 'pending' && (
+                                                    <div className="flex gap-2 mt-2">
+                                                      <button
+                                                        className="px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-60"
+                                                        disabled={complaintActionLoading === c.id + 'accepted'}
+                                                        onClick={() => handleResolveComplaint(c.id, 'accepted')}
+                                                      >
+                                                        {complaintActionLoading === c.id + 'accepted' ? 'Đang duyệt...' : 'Chấp nhận'}
+                                                      </button>
+                                                      <button
+                                                        className="px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-60"
+                                                        disabled={complaintActionLoading === c.id + 'rejected'}
+                                                        onClick={() => handleResolveComplaint(c.id, 'rejected')}
+                                                      >
+                                                        {complaintActionLoading === c.id + 'rejected' ? 'Đang từ chối...' : 'Từ chối'}
+                                                      </button>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <div className="text-gray-500 text-center">Không có khiếu nại nào cho hóa đơn này.</div>
+                                          )}
+                                          <div className="flex justify-end mt-6">
+                                            <button className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setComplaintModal({ open: false })}>Đóng</button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -229,7 +386,7 @@ const ElectricBillList: React.FC = () => {
                         className="border rounded px-3 py-2 w-full"
                         required
                         value={form.area_id}
-                        onChange={e => setForm((f: any) => ({ ...f, area_id: e.target.value, room_id: '' }))}
+                        onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, area_id: e.target.value, room_id: '' }))}
                         disabled={submitting}
                       >
                         <option value="">-- Chọn khu --</option>
@@ -245,7 +402,7 @@ const ElectricBillList: React.FC = () => {
                         className="border rounded px-3 py-2 w-full"
                         required
                         value={form.room_id}
-                        onChange={e => setForm((f: any) => ({ ...f, room_id: e.target.value }))}
+                        onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, room_id: e.target.value }))}
                         disabled={submitting || !form.area_id}
                       >
                         <option value="">-- Chọn phòng --</option>
@@ -254,22 +411,22 @@ const ElectricBillList: React.FC = () => {
                         ))}
                       </select>
                     </div>
-                    <input className="border rounded px-3 py-2" type="month" placeholder="Tháng" required value={form.month} onChange={e => setForm((f: any) => ({ ...f, month: e.target.value }))} disabled={submitting} />
-                    <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số cũ" required value={form.prev_electric} onChange={e => setForm((f: any) => ({ ...f, prev_electric: e.target.value }))} disabled={submitting} />
-                    <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số mới" required value={form.curr_electric} onChange={e => setForm((f: any) => ({ ...f, curr_electric: e.target.value }))} disabled={submitting} />
-                    <input className="border rounded px-3 py-2" type="number" placeholder="Số tiền" required value={form.amount} onChange={e => setForm((f: any) => ({ ...f, amount: e.target.value }))} disabled={submitting} />
+                    <input className="border rounded px-3 py-2" type="month" placeholder="Tháng" required value={form.month} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, month: e.target.value }))} disabled={submitting} />
+                    <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số cũ" required value={form.prev_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, prev_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
+                    <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số mới" required value={form.curr_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, curr_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
+                    <input className="border rounded px-3 py-2" type="number" placeholder="Số tiền" required value={form.amount ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, amount: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
                     {/* Chỉ hiện trạng thái thanh toán và minh chứng khi sửa */}
                     {modal.mode === 'edit' && (
                       <>
                         <div className="flex flex-col gap-2 md:col-span-2">
                           <label className="font-medium text-gray-700">Trạng thái thanh toán</label>
-                          <select className="border rounded px-3 py-2" value={form.payment_status} onChange={e => setForm((f: any) => ({ ...f, payment_status: e.target.value }))} disabled={submitting}>
+                          <select className="border rounded px-3 py-2" value={form.payment_status} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, payment_status: e.target.value as 'unpaid' | 'paid' }))} disabled={submitting}>
                             <option value="">-- Chọn trạng thái --</option>
                             <option value="unpaid">Chưa thanh toán</option>
                             <option value="paid">Đã thanh toán</option>
                           </select>
                         </div>
-                        <input className="border rounded px-3 py-2 md:col-span-2" placeholder="Link minh chứng thanh toán (nếu có)" value={form.payment_proof} onChange={e => setForm((f: any) => ({ ...f, payment_proof: e.target.value }))} disabled={submitting} />
+                        <input className="border rounded px-3 py-2 md:col-span-2" placeholder="Link minh chứng thanh toán (nếu có)" value={form.payment_proof} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, payment_proof: e.target.value }))} disabled={submitting} />
                       </>
                     )}
                   </div>

@@ -13,24 +13,45 @@ const paymentMap: Record<string, string> = {
   paid: "Đã thanh toán",
 };
 
+type NullableStringFromDB = {
+  String?: string;
+  Valid?: boolean;
+} | null;
+
+type Contract = {
+  id: string | number;
+  room: string;
+  status: string;
+  status_payment: string;
+  start_date: string | number | Date;
+  end_date: string | number | Date;
+  total_amount?: number;
+  created_at: string | number | Date;
+  note?: string;
+  image_bill?: string | NullableStringFromDB;
+};
+
 const ContractList: React.FC = () => {
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ open: boolean; contract?: any }>({ open: false });
+  const [modal, setModal] = useState<{ open: boolean; contract?: Contract }>({ open: false });
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState("approved");
   const [verifyNote, setVerifyNote] = useState("");
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
-  const token = localStorage.getItem("ptit_access_token") || "";
 
   const fetchContracts = async () => {
     setLoading(true);
     try {
-      const res = await getContracts(token);
+      const res = await getContracts();
       setContracts(res.data || []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError("Đã xảy ra lỗi không xác định.");
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +62,21 @@ const ContractList: React.FC = () => {
     // eslint-disable-next-line
   }, []);
 
-  const openModal = (contract: any) => {
+  const getImageBillUrl = (imageBill: Contract["image_bill"]) => {
+    if (!imageBill) return null;
+    if (typeof imageBill === "string") {
+      return imageBill || null;
+    }
+    if (typeof imageBill === "object" && imageBill !== null) {
+      const maybe = imageBill as NullableStringFromDB;
+      if (maybe?.Valid && typeof maybe.String === "string" && maybe.String.trim() !== "") {
+        return maybe.String;
+      }
+    }
+    return null;
+  };
+
+  const openModal = (contract: Contract) => {
     setModal({ open: true, contract });
     setVerifyStatus("approved");
     setVerifyNote("");
@@ -51,11 +86,15 @@ const ContractList: React.FC = () => {
     if (!modal.contract) return;
     setVerifyLoading(true);
     try {
-      await verifyContract(modal.contract.id, { status: verifyStatus, note: verifyNote }, token);
+      await verifyContract(String(modal.contract.id), { status: verifyStatus, note: verifyNote });
       setModal({ open: false });
       fetchContracts();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message);
+      } else {
+        alert("Đã xảy ra lỗi không xác định.");
+      }
     } finally {
       setVerifyLoading(false);
     }
@@ -91,17 +130,17 @@ const ContractList: React.FC = () => {
                   </thead>
                   <tbody>
                     {contracts.map((c) => (
-                      <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50 transition">
-                        <td className="p-4 font-semibold text-red-700">{c.room}</td>
+                      <tr key={String(c.id)} className="border-b last:border-0 hover:bg-gray-50 transition">
+                        <td className="p-4 font-semibold text-red-700">{String(c.room)}</td>
                         <td className="p-4">
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${c.status === 'approved' ? 'bg-green-100 text-green-700' : c.status === 'canceled' ? 'bg-gray-200 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>{statusMap[c.status]}</span>
                         </td>
                         <td className="p-4">
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${c.status_payment === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{paymentMap[c.status_payment]}</span>
                         </td>
-                        <td className="p-4 text-xs">{new Date(c.start_date).toLocaleDateString()} - {new Date(c.end_date).toLocaleDateString()}</td>
+                        <td className="p-4 text-xs">{new Date(c.start_date as string | number | Date).toLocaleDateString()} - {new Date(c.end_date as string | number | Date).toLocaleDateString()}</td>
                         <td className="p-4">{c.total_amount?.toLocaleString()}đ</td>
-                        <td className="p-4 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
+                        <td className="p-4 text-xs">{new Date(c.created_at as string).toLocaleDateString()}</td>
                         <td className="p-4 text-center">
                           <button className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 mr-2" onClick={() => openModal(c)}>
                             Xem/duyệt
@@ -127,15 +166,28 @@ const ContractList: React.FC = () => {
                 {/* Thông tin hợp đồng bên trái */}
                 <div className="flex-1 min-w-0 space-y-2 text-sm">
                   <h3 className="text-xl font-bold text-red-700 mb-4 text-center">Chi tiết hợp đồng</h3>
-                  <div><b>Phòng:</b> {modal.contract.room}</div>
-                  <div><b>Trạng thái:</b> {statusMap[modal.contract.status]}</div>
-                  <div><b>Thanh toán:</b> {paymentMap[modal.contract.status_payment]}</div>
-                  <div><b>Thời hạn:</b> {new Date(modal.contract.start_date).toLocaleDateString()} - {new Date(modal.contract.end_date).toLocaleDateString()}</div>
+                  <div><b>Phòng:</b> {String(modal.contract.room)}</div>
+                  <div><b>Trạng thái:</b> {statusMap[String(modal.contract.status)]}</div>
+                  <div><b>Thanh toán:</b> {paymentMap[String(modal.contract.status_payment)]}</div>
+                  <div><b>Thời hạn:</b> {new Date(modal.contract.start_date as string | number | Date).toLocaleDateString()} - {new Date(modal.contract.end_date as string | number | Date).toLocaleDateString()}</div>
                   <div><b>Tổng tiền:</b> {modal.contract.total_amount?.toLocaleString()}đ</div>
-                  <div><b>Ngày tạo:</b> {new Date(modal.contract.created_at).toLocaleDateString()}</div>
-                  <div><b>Ghi chú:</b> {modal.contract.note || <span className="italic text-gray-400">Không có</span>}</div>
-                  {modal.contract.image_bill && (
-                    <div><b>Ảnh minh chứng:</b><br /><img src={modal.contract.image_bill} alt="bill" className="w-full max-w-xs rounded border mt-1" /></div>
+                  <div><b>Ngày tạo:</b> {new Date(modal.contract.created_at as string | number | Date).toLocaleDateString()}</div>
+                  <div>
+                    <b>Ghi chú:</b>{" "}
+                    {typeof modal.contract.note === "string" && modal.contract.note.trim() !== ""
+                      ? modal.contract.note
+                      : <span className="italic text-gray-400">Không có</span>}
+                  </div>
+                  {getImageBillUrl(modal.contract.image_bill) && (
+                    <div>
+                      <b>Ảnh minh chứng:</b>
+                      <br />
+                      <img
+                        src={getImageBillUrl(modal.contract.image_bill) as string}
+                        alt="bill"
+                        className="w-full max-w-xs rounded border mt-1"
+                      />
+                    </div>
                   )}
                 </div>
                 {/* Form duyệt bên phải */}

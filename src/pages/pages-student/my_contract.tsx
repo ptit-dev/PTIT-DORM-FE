@@ -15,18 +15,51 @@ const paymentMap: Record<string, { label: string; color: string }> = {
 };
 
 
+type DormApplication = {
+	username?: string;
+	full_name: string;
+	student_id?: string;
+	class: string;
+	faculty: string;
+	phone: string;
+	email: string;
+	hometown: string;
+	priority_group?: string;
+	priority_proof?: string;
+	avatar_front?: string;
+	avatar_back?: string;
+};
+
+type NullableStringFromDB = {
+	String?: string;
+	Valid?: boolean;
+} | null;
+
+type Contract = {
+	id: string | number;
+	code?: string;
+	room?: string;
+	start_date?: string;
+	end_date?: string;
+	total_amount?: number;
+	status: string;
+	status_payment: string;
+	image_bill?: string | NullableStringFromDB;
+	note?: string;
+	dorm_application?: DormApplication;
+};
+
 const MyContract: React.FC = () => {
-	const [contracts, setContracts] = useState<any[]>([]);
+	const [contracts, setContracts] = useState<Contract[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [selectedContract, setSelectedContract] = useState<any | null>(null);
+	const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 	const [modalStep, setModalStep] = useState<0 | 1 | 2>(0); // 0: xem chi tiết, 1: thanh toán, 2: kết quả
 	const [paymentProof, setPaymentProof] = useState<File | null>(null);
 	const [note, setNote] = useState("");
 	const [uploading, setUploading] = useState(false);
 	const [resultMsg, setResultMsg] = useState<string | null>(null);
 	const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
-	const token = localStorage.getItem("ptit_access_token") || "";
 
 
 	useEffect(() => {
@@ -53,6 +86,20 @@ const MyContract: React.FC = () => {
 		return d.toLocaleDateString();
 	};
 
+	const getImageBillUrl = (imageBill: Contract["image_bill"]) => {
+		if (!imageBill) return null;
+		if (typeof imageBill === "string") {
+			return imageBill || null;
+		}
+		if (typeof imageBill === "object" && imageBill !== null) {
+			const maybe = imageBill as NullableStringFromDB;
+			if (maybe?.Valid && typeof maybe.String === "string" && maybe.String.trim() !== "") {
+				return maybe.String;
+			}
+		}
+		return null;
+	};
+
 	return (
 		<div className="min-h-screen flex flex-col bg-white">
 			<Header user={user} />
@@ -70,11 +117,11 @@ const MyContract: React.FC = () => {
 						) : (
 							<div className="space-y-6">
 								{contracts.map((c) => (
-									<div key={c.id} className="bg-white rounded-xl shadow border border-red-100 p-5 flex flex-col md:flex-row md:items-center gap-4 hover:shadow-lg transition">
+									<div key={c.id as string | number} className="bg-white rounded-xl shadow border border-red-100 p-5 flex flex-col md:flex-row md:items-center gap-4 hover:shadow-lg transition">
 										<div className="flex-1">
-											<div className="text-lg font-semibold text-red-700 mb-1">Mã hợp đồng: {c.code || c.id}</div>
-											<div className="text-gray-700 text-sm mb-1">Phòng: <span className="font-medium">{c.room}</span></div>
-											<div className="text-gray-700 text-sm mb-1">Thời hạn: <span className="font-medium">{formatDate(c.start_date)} - {formatDate(c.end_date)}</span></div>
+											<div className="text-lg font-semibold text-red-700 mb-1">Mã hợp đồng: {String(c.code ?? c.id)}</div>
+											<div className="text-gray-700 text-sm mb-1">Phòng: <span className="font-medium">{String(c.room)}</span></div>
+											<div className="text-gray-700 text-sm mb-1">Thời hạn: <span className="font-medium">{formatDate(String(c.start_date))} - {formatDate(String(c.end_date))}</span></div>
 											<div className="text-gray-700 text-sm mb-1">Tổng tiền: <span className="font-semibold text-red-700">{c.total_amount?.toLocaleString()}đ</span></div>
 											<div className="text-gray-700 text-sm mb-1">Trạng thái: <span className={`font-semibold px-2 py-1 rounded ${statusMap[c.status]?.color || "bg-gray-100 text-gray-700"}`}>{statusMap[c.status]?.label || c.status}</span></div>
 											<div className="text-gray-700 text-sm mb-1">Thanh toán: <span className={`font-semibold px-2 py-1 rounded ${paymentMap[c.status_payment]?.color || "bg-gray-100 text-gray-700"}`}>{paymentMap[c.status_payment]?.label || c.status_payment}</span></div>
@@ -127,8 +174,15 @@ const MyContract: React.FC = () => {
 														<div className="font-semibold text-gray-700 mb-1">Tổng tiền: <span className="font-normal">{selectedContract.total_amount?.toLocaleString()}đ</span></div>
 														<div className="font-semibold text-gray-700 mb-1">Trạng thái: <span className={`font-normal ${statusMap[selectedContract.status]?.color || "bg-gray-100 text-gray-700"}`}>{statusMap[selectedContract.status]?.label || selectedContract.status}</span></div>
 														<div className="font-semibold text-gray-700 mb-1">Thanh toán: <span className={`font-normal ${paymentMap[selectedContract.status_payment]?.color || "bg-gray-100 text-gray-700"}`}>{paymentMap[selectedContract.status_payment]?.label || selectedContract.status_payment}</span></div>
-														{selectedContract.image_bill && (
-															<a href={selectedContract.image_bill} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">Xem minh chứng thanh toán</a>
+														{getImageBillUrl(selectedContract.image_bill) && (
+															<a
+																href={getImageBillUrl(selectedContract.image_bill) as string}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="text-blue-600 underline text-xs"
+															>
+																Xem minh chứng thanh toán
+															</a>
 														)}
 														{selectedContract.note && <div className="text-xs text-gray-500 italic mt-1">{selectedContract.note}</div>}
 													</div>
@@ -138,7 +192,7 @@ const MyContract: React.FC = () => {
 															<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 																<div>
 																	<div className="font-semibold text-gray-700 mb-1">Họ tên: <span className="font-normal">{selectedContract.dorm_application.full_name}</span></div>
-																	<div className="font-semibold text-gray-700 mb-1">Mã SV: <span className="font-normal">{selectedContract.dorm_application.student_id}</span></div>
+																	<div className="font-semibold text-gray-700 mb-1">Mã SV: <span className="font-normal">{selectedContract.dorm_application.username || selectedContract.dorm_application.student_id}</span></div>
 																	<div className="font-semibold text-gray-700 mb-1">Lớp: <span className="font-normal">{selectedContract.dorm_application.class}</span></div>
 																	<div className="font-semibold text-gray-700 mb-1">Khoa: <span className="font-normal">{selectedContract.dorm_application.faculty}</span></div>
 																	<div className="font-semibold text-gray-700 mb-1">SĐT: <span className="font-normal">{selectedContract.dorm_application.phone}</span></div>
@@ -191,11 +245,12 @@ const MyContract: React.FC = () => {
 															if (!paymentProof) return;
 															setUploading(true);
 															try {
-																await confirmContract(selectedContract.id, { image_bill: paymentProof, note }, token);
+																await confirmContract(String(selectedContract.id), { image_bill: paymentProof, note });
 																setResultMsg('Gửi minh chứng thành công! Hợp đồng sẽ được xác nhận sau khi quản lý kiểm tra.');
 																setModalStep(2);
-															} catch (err: any) {
-																setResultMsg(err.message || 'Có lỗi xảy ra khi gửi minh chứng.');
+															} catch (err: unknown) {
+																const errorMsg = err instanceof Error ? err.message : 'Có lỗi xảy ra khi gửi minh chứng.';
+																setResultMsg(errorMsg);
 																setModalStep(2);
 															} finally {
 																setUploading(false);

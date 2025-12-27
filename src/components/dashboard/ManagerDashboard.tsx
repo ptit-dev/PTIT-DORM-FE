@@ -1,6 +1,11 @@
 import React from "react";
+interface User {
+  id: string;
+  name: string;
+  // Add other properties as needed
+}
 
-const ManagerDashboard: React.FC<{ user: any }> = ({ user }) => (
+const ManagerDashboard: React.FC<{ user: User }> = ({ user }) => (
   <>
     <h2 className="text-2xl font-bold mb-6 text-primary">Dashboard quản trị hệ thống</h2>
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

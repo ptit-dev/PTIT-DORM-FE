@@ -172,11 +172,15 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
         });
       }, 1000);
       setTimerId(id);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let message = "Không thể gửi OTP. Vui lòng thử lại sau.";
+      if (error instanceof Error) {
+        message = error.message;
+      }
       toast({
         variant: "destructive",
         title: "Lỗi gửi OTP",
-        description: error.message || "Không thể gửi OTP. Vui lòng thử lại sau.",
+        description: message,
       });
     } finally {
       setIsLoading(false);
@@ -238,12 +242,13 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
         setTimer(180);
         if (timerId) clearInterval(timerId);
         setStep(2); // Sang bước kết quả
-      } else {
-        setOtpError('OTP không hợp lệ hoặc đã hết hạn.');
-        setOtpTries((prev) => prev + 1);
       }
-    } catch (error: any) {
-      setOtpError(error.message || 'Xác thực OTP thất bại.');
+    } catch (error: unknown) {
+      let message = 'Xác thực OTP thất bại.';
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      setOtpError(message);
       setOtpTries((prev) => prev + 1);
     } finally {
       setIsLoading(false);
@@ -546,12 +551,23 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
                       value={otp[i] || ''}
                       onChange={e => {
                         const val = e.target.value.replace(/\D/g, '');
-                        if (!val) return;
-                        const newOtp = otp.substring(0, i) + val + otp.substring(i+1);
-                        setOtp(newOtp.slice(0,6));
-                        // focus next
-                        const next = document.getElementById(`otp-input-${i+1}`);
-                        if (next) (next as HTMLInputElement).focus();
+                        const newOtp = otp.split('');
+                        if (val) {
+                          newOtp[i] = val[val.length - 1];
+                          setOtp(newOtp.join('').padEnd(6, ''));
+                          // focus next
+                          const next = document.getElementById(`otp-input-${i+1}`);
+                          if (next && i < 5) (next as HTMLInputElement).focus();
+                        } else {
+                          newOtp[i] = '';
+                          setOtp(newOtp.join('').padEnd(6, ''));
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Backspace' && !otp[i] && i > 0) {
+                          const prev = document.getElementById(`otp-input-${i-1}`);
+                          if (prev) (prev as HTMLInputElement).focus();
+                        }
                       }}
                       id={`otp-input-${i}`}
                       className="w-10 h-12 text-center text-xl border-2 border-gray-300 rounded bg-gray-50 focus:border-red-500 focus:bg-white focus:ring-2 focus:ring-red-400 transition-colors duration-150 hover:border-red-400 cursor-pointer"

@@ -27,8 +27,12 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ open, onClose, onLogout, onLo
       localStorage.clear();
       onLogoutAll(password);
       window.location.reload();
-    } catch (e: any) {
-      setError(e.message || "Có lỗi xảy ra");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message || "Có lỗi xảy ra");
+      } else {
+        setError("Có lỗi xảy ra");
+      }
     } finally {
       setLoading(false);
     }

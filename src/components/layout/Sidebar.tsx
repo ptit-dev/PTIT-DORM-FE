@@ -21,6 +21,7 @@ const MENU_CONFIG = {
     { to: "/profile", icon: User, label: "Thông tin cá nhân" },
     // { to: "/dorm-info", icon: FileText, label: "Thông tin KTX" },
     { to: "/my-contract", icon: FileText, label: "Hợp đồng của bạn" },
+    { to: "/my-room", icon: FileText, label: "Phòng ở của bạn" },
     { to: "/my-room-electric-bills", icon: DollarSign, label: "Hóa đơn tiền điện" },
     {
       label: "Dịch vụ nội trú",
@@ -39,31 +40,33 @@ const MENU_CONFIG = {
         { to: "/change-password", icon: LogOut, label: "Đổi mật khẩu" },
       ],
     },
+    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
   ],
   non_manager: [
     { to: "/home", icon: Home, label: "Trang chủ" },
     { to: "/news", icon: Newspaper, label: "Tin tức" },
     { to: "/profile", icon: User, label: "Thông tin cá nhân" },
-    // { to: "/dorm-info", icon: FileText, label: "Thông tin KTX" },
     { to: "/dorm-areas", icon: FileText, label: "Khu vực KTX" },
-    { to: "/registration-period", icon: FileText, label: "Thời gian đăng ký" },
-    { to: "/application-list", icon: FileText, label: "Thông tin nguyện vọng" },
-    { to: "/contract-info", icon: FileText, label: "Thông tin hợp đồng" },
-    { to: "/manage-employee", icon: Users, label: "Quản lý nhân viên" },
     {to: "/duty-schedule", icon: Calendar, label: "Lịch trực" },
+    { to: "/facility-complaints", icon: Layers, label: "Khiếu nại CSVC" },
+    { to: "/electric-bill-list", icon: DollarSign, label: "Hóa đơn tiền điện" },
+    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
   ],
   manager: [
     { to: "/home", icon: Home, label: "Trang chủ" },
     { to: "/news", icon: Newspaper, label: "Tin tức" },
     { to: "/profile", icon: User, label: "Thông tin cá nhân" },
-    // { to: "/dorm-info", icon: FileText, label: "Thông tin KTX" },
     { to: "/dorm-areas", icon: FileText, label: "Khu vực KTX" },
     { to: "/registration-period", icon: FileText, label: "Thời gian đăng ký" },
     { to: "/application-list", icon: FileText, label: "Thông tin nguyện vọng" },
     { to: "/contract-list", icon: FileText, label: "Danh sách hợp đồng" },
+    { to: "/manage-rooms", icon: FileText, label: "Quản lý phòng ở" },
+    { to: "/room-transfer-requests", icon: Layers, label: "Yêu cầu chuyển phòng" },
+    { to: "/facility-complaints", icon: Layers, label: "Khiếu nại CSVC" },
     { to: "/electric-bill-list", icon: DollarSign, label: "Hóa đơn tiền điện" },
     { to: "/manage-employee", icon: Users, label: "Quản lý nhân viên" },
     { to: "/duty-schedule", icon: Calendar, label: "Lịch trực" },
+    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
   ],
   admin_system: [
     { to: "/home", icon: ShieldCheck, label: "Dashboard" },
@@ -71,22 +74,14 @@ const MENU_CONFIG = {
     {
       label: "Quản lý tài khoản",
       icon: Users,
-      submenu: [
-        { to: "/accounts/pending", label: "Chờ duyệt" },
-        { to: "/accounts/locked", label: "Bị khóa" },
-        { to: "/accounts/all", label: "Tất cả tài khoản" },
-      ],
+      to: "/admin-accounts",
     },
-    { to: "/roles", icon: User, label: "Phân quyền" },
-    { to: "/logs", icon: Layers, label: "Nhật ký hệ thống" },
-    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
+    { to: "/roles", icon: User, label: "Phân quyền Hệ thống" },
+    { to: "/system-logs", icon: Layers, label: "Nhật ký hệ thống" },
     {
-      label: "Cài đặt hệ thống",
+      label: "Sao lưu hệ thống",
       icon: Settings,
-      submenu: [
-        { to: "/system/backup", label: "Sao lưu" },
-        { to: "/system/update", label: "Cập nhật" },
-      ],
+      to: "/backup-data",
     },
     { to: "/dorm-info", icon: FileText, label: "Thông tin KTX" },
   ],
@@ -98,6 +93,7 @@ function getMenuByRoles(roles) {
   // Ưu tiên admin > manager > student > guest
   if (roles?.includes("admin_system")) return { menu: MENU_CONFIG.admin_system, title: "Menu Admin" };
   if (roles?.includes("manager")) return { menu: MENU_CONFIG.manager, title: "Menu Quản lý" };
+  if (roles?.includes("non-manager")) return { menu: MENU_CONFIG.non_manager, title: "Menu Nhân viên" };
   if (roles?.includes("student")) return { menu: MENU_CONFIG.student, title: "Menu Sinh viên" };
   return { menu: MENU_CONFIG.guest, title: "Menu Khách" };
 }
