@@ -31,7 +31,7 @@ import BackupData from "./pages/BackupData";
 import RoomTransferRequests from "./pages/pages-manager/RoomTransferRequests";
 import { refreshAccessToken } from "@/features/auth/api";
 import RequireAuth from "@/features/auth/RequireAuth";
-
+import ChatbotButton from "./components/ui/chatbot-button";
 const queryClient = new QueryClient();
 const AuthInitializer = () => {
   const navigate = useNavigate();
@@ -275,6 +275,9 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+
+        <ChatbotButton />
+
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
