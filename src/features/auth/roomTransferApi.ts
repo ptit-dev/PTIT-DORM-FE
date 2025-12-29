@@ -6,6 +6,8 @@ export interface RoomTransferRequest {
   id: string;
   requester_user_id: string;
   target_user_id: string;
+  requester_username?: string;
+  target_username?: string;
   target_room_id: string;
   transfer_time: string;
   reason: string;

@@ -232,13 +232,15 @@ const FacilityService: React.FC = () => {
                       >
                         Xem chi tiết
                       </button>
-                      <button
-                        type="button"
-                        className="px-4 py-1.5 rounded bg-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-300"
-                        onClick={() => handleConfirmDelete(complaint)}
-                      >
-                        Xóa
-                      </button>
+                      {complaint.status.toLowerCase() === "pending" && (
+                        <button
+                          type="button"
+                          className="px-4 py-1.5 rounded bg-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-300"
+                          onClick={() => handleConfirmDelete(complaint)}
+                        >
+                          Xóa
+                        </button>
+                      )}
                     </div>
                   </td>
                 )}

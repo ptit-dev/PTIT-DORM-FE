@@ -5,6 +5,7 @@ export type FacilityComplaint = {
   room_id: string;
   student_id: string;
   student_name?: string;
+  username?: string;
   title: string;
   description?: string;
   proof?: string;
@@ -139,6 +140,25 @@ export async function updateFacilityComplaint(id: string, payload: {
   });
   if (!res.ok) {
     throw new Error("Không thể cập nhật khiếu nại cơ sở vật chất");
+  }
+  return res.json();
+}
+
+export async function updateFacilityComplaintStatus(id: string, status: string): Promise<FacilityComplaint> {
+  const token = getAccessToken();
+  const body = { status };
+
+  const res = await fetch(`${BASE_URL}/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error("Không thể cập nhật trạng thái khiếu nại cơ sở vật chất");
   }
   return res.json();
 }

@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Intro from "./pages/Intro";
 import Home from "./pages/Home";
+import News from "./pages/News";
 import OauthCallback from "./pages/OauthCallback";
 import DormInfo from "./pages/DormInfo";
 import DormArea from "./pages/pages-manager/DormArea";
@@ -33,50 +34,50 @@ import { refreshAccessToken } from "@/features/auth/api";
 import RequireAuth from "@/features/auth/RequireAuth";
 import ChatbotButton from "./components/ui/chatbot-button";
 const queryClient = new QueryClient();
-const AuthInitializer = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+// const AuthInitializer = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
 
-  useEffect(() => {
-    const refreshToken = localStorage.getItem("ptit_refresh_token");
-    if (!refreshToken) return;
+//   useEffect(() => {
+//     const refreshToken = localStorage.getItem("ptit_refresh_token");
+//     if (!refreshToken) return;
 
-    let cancelled = false;
+//     let cancelled = false;
 
-    const run = async () => {
-      try {
-        const data = await refreshAccessToken(refreshToken);
-        if (cancelled) return;
+//     const run = async () => {
+//       try {
+//         const data = await refreshAccessToken(refreshToken);
+//         if (cancelled) return;
 
-        if (!data?.access_token) {
-          throw new Error("Missing access_token from refresh response");
-        }
+//         if (!data?.access_token) {
+//           throw new Error("Missing access_token from refresh response");
+//         }
 
-        localStorage.setItem("ptit_access_token", data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem("ptit_refresh_token", data.refresh_token);
-        }
-        if (data.user) {
-          localStorage.setItem("ptit_user", JSON.stringify(data.user));
-        }
-      } catch {
-        if (cancelled) return;
-        localStorage.clear();
-        if (location.pathname !== "/") {
-          navigate("/", { replace: true });
-        }
-      }
-    };
+//         localStorage.setItem("ptit_access_token", data.access_token);
+//         if (data.refresh_token) {
+//           localStorage.setItem("ptit_refresh_token", data.refresh_token);
+//         }
+//         if (data.user) {
+//           localStorage.setItem("ptit_user", JSON.stringify(data.user));
+//         }
+//       } catch {
+//         if (cancelled) return;
+//         localStorage.clear();
+//         if (location.pathname !== "/") {
+//           navigate("/", { replace: true });
+//         }
+//       }
+//     };
 
-    run();
+//     run();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate, location.pathname]);
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [navigate, location.pathname]);
 
-  return null;
-};
+//   return null;
+// };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -84,7 +85,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthInitializer />
+        {/* <AuthInitializer /> */}
         <Routes>
           <Route path="/oauth-callback" element={<OauthCallback />} />
           <Route path="/" element={<Intro />} />
@@ -94,6 +95,14 @@ const App = () => (
             element={(
               <RequireAuth>
                 <Home />
+              </RequireAuth>
+            )}
+          />
+          <Route
+            path="/news"
+            element={(
+              <RequireAuth>
+                <News />
               </RequireAuth>
             )}
           />

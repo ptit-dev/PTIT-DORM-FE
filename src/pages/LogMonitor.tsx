@@ -15,7 +15,7 @@ const LogMonitorPage: React.FC = () => {
         setLogs([]);
         let ws = getAdminSocket();
         if (!ws || ws.readyState !== 1) {
-            ws = connectAdminSocket(token, (event) => {
+            ws = connectAdminSocket((event) => {
                 setLogs((prev) => [...prev, event.data]);
             });
         } else {

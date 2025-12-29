@@ -47,7 +47,6 @@ interface StudentUser {
 
 const StudentDashboard: React.FC<{ user: StudentUser }> = ({ user }) => (
   <>
-    <WelcomeBanner name={user?.display_name || "Sinh viên"} />
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       {/* Notifications */}
       <section className="col-span-1">

@@ -147,6 +147,24 @@ function PasswordModal({ open, onClose, onSuccess }: { open: boolean, onClose: (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [oldTouched, setOldTouched] = useState(false);
+  const [newTouched, setNewTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
+
+  const isStrongPassword = (value: string): boolean => {
+    // Ít nhất 8 ký tự, gồm chữ thường, chữ hoa, số và ký tự đặc biệt
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    return strongPasswordRegex.test(value);
+  };
+
+  const oldValid = oldPassword.trim().length > 0;
+  const hasMinLength = newPassword.length >= 8;
+  const hasLowercase = /[a-z]/.test(newPassword);
+  const hasUppercase = /[A-Z]/.test(newPassword);
+  const hasDigit = /\d/.test(newPassword);
+  const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+  const newValid = isStrongPassword(newPassword);
+  const confirmValid = confirmPassword.length > 0 && confirmPassword === newPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +175,10 @@ function PasswordModal({ open, onClose, onSuccess }: { open: boolean, onClose: (
     }
     if (newPassword !== confirmPassword) {
       setError("Mật khẩu mới không khớp");
+      return;
+    }
+    if (!isStrongPassword(newPassword)) {
+      setError("Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.");
       return;
     }
     setLoading(true);
@@ -180,14 +202,67 @@ function PasswordModal({ open, onClose, onSuccess }: { open: boolean, onClose: (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form onSubmit={handleSubmit} className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl flex flex-col items-center">
         <h2 className="text-lg font-bold mb-4">Đổi mật khẩu</h2>
-        <input type="password" className="mb-2 px-3 py-2 border rounded w-full" placeholder="Mật khẩu cũ" value={oldPassword} onChange={e => setOldPassword(e.target.value)} />
-        <input type="password" className="mb-2 px-3 py-2 border rounded w-full" placeholder="Mật khẩu mới" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-        <input type="password" className="mb-2 px-3 py-2 border rounded w-full" placeholder="Nhập lại mật khẩu mới" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+        <input
+          type="password"
+          className={`px-3 py-2 border rounded w-full ${
+            oldTouched ? (oldValid ? "border-green-500" : "border-red-500") : "mb-2"
+          }`}
+          placeholder="Mật khẩu cũ"
+          value={oldPassword}
+          onChange={e => setOldPassword(e.target.value)}
+          onBlur={() => setOldTouched(true)}
+        />
+        {oldTouched && (
+          <div className={`w-full text-xs mb-2 ${oldValid ? "text-green-600" : "text-red-500"}`}>
+            {oldValid ? "Mật khẩu cũ đã được nhập." : "Vui lòng nhập mật khẩu cũ."}
+          </div>
+        )}
+        <input
+          type="password"
+          className={`px-3 py-2 border rounded w-full ${
+            newTouched ? (newValid ? "border-green-500" : "border-red-500") : "mb-1"
+          }`}
+          placeholder="Mật khẩu mới"
+          value={newPassword}
+          onChange={e => setNewPassword(e.target.value)}
+          onBlur={() => setNewTouched(true)}
+        />
+        <div className="w-full text-xs text-gray-500 mb-2">
+          <p className="mb-1">Mật khẩu mới phải bao gồm:</p>
+          <ul className="space-y-0.5">
+            <li className={hasMinLength ? "text-green-600" : "text-gray-500"}>• Ít nhất 8 ký tự</li>
+            <li className={hasUppercase ? "text-green-600" : "text-gray-500"}>• Chữ hoa (A-Z)</li>
+            <li className={hasLowercase ? "text-green-600" : "text-gray-500"}>• Chữ thường (a-z)</li>
+            <li className={hasDigit ? "text-green-600" : "text-gray-500"}>• Số (0-9)</li>
+            <li className={hasSpecial ? "text-green-600" : "text-gray-500"}>• Ký tự đặc biệt (!@#$...)</li>
+          </ul>
+        </div>
+        <input
+          type="password"
+          className={`px-3 py-2 border rounded w-full ${
+            confirmTouched ? (confirmValid ? "border-green-500" : "border-red-500") : "mb-2"
+          }`}
+          placeholder="Nhập lại mật khẩu mới"
+          value={confirmPassword}
+          onChange={e => setConfirmPassword(e.target.value)}
+          onBlur={() => setConfirmTouched(true)}
+        />
+        {confirmTouched && confirmPassword.length > 0 && (
+          <div className={`w-full text-xs mb-1 ${confirmValid ? "text-green-600" : "text-red-500"}`}>
+            {confirmValid ? "Mật khẩu nhập lại khớp." : "Mật khẩu nhập lại chưa khớp."}
+          </div>
+        )}
         {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
         {success && <div className="text-green-600 text-sm mb-2">Đổi mật khẩu thành công!</div>}
         <div className="flex gap-2 mt-2">
           <button type="button" className="px-4 py-2 bg-gray-300 rounded" onClick={onClose} disabled={loading}>Huỷ</button>
-          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded" disabled={loading}>{loading ? "Đang lưu..." : "Lưu"}</button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+            disabled={loading || !oldValid || !newValid || !confirmValid}
+          >
+            {loading ? "Đang lưu..." : "Lưu"}
+          </button>
         </div>
       </form>
     </div>
@@ -593,8 +668,8 @@ const Profile: React.FC = () => {
                         <div key={p.id} className="bg-blue-50 border border-blue-200 rounded p-3">
                           <div className="font-semibold">{p.type}: {p.fullname}</div>
                           <div className="text-gray-700">SĐT: {p.phone}</div>
-                          <div className="text-gray-700">Ngày sinh: {p.dob ? new Date(p.dob).toLocaleDateString() : ""}</div>
-                          <div className="text-gray-700">Địa chỉ: {p.address}</div>
+                          {/* <div className="text-gray-700">Ngày sinh: {p.dob ? new Date(p.dob).toLocaleDateString() : ""}</div>
+                          <div className="text-gray-700">Địa chỉ: {p.address}</div> */}
                         </div>
                       )) : <div className="text-gray-500 italic">Chưa cập nhật phụ huynh</div>}
                     </div>

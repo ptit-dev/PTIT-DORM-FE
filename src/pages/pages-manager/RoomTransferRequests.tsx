@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Clipboard, Eye } from "lucide-react";
 import {
   RoomTransferRequest,
   getRoomTransferRequests,
@@ -17,6 +18,7 @@ const RoomTransferRequests: React.FC = () => {
   const [requests, setRequests] = useState<RoomTransferRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -65,6 +67,28 @@ const RoomTransferRequests: React.FC = () => {
     }
   };
 
+  const maskId = (id: string): string => {
+    if (!id) return "";
+    if (id.length <= 8) return id;
+    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+  };
+
+  const handleCopyId = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      toast({ title: "Đã copy ID", description: id, duration: 1500 });
+    } catch {
+      toast({ variant: "destructive", title: "Không thể copy ID" });
+    }
+  };
+
+  const handleRevealId = (id: string) => {
+    setRevealedId(id);
+    setTimeout(() => {
+      setRevealedId((current) => (current === id ? null : current));
+    }, 1000);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header user={user} />
@@ -91,8 +115,8 @@ const RoomTransferRequests: React.FC = () => {
                   <thead>
                     <tr className="bg-gray-100 text-left">
                       <th className="p-2">ID</th>
-                      <th className="p-2">Requester</th>
-                      <th className="p-2">Target</th>
+                      <th className="p-2">Sinh viên A</th>
+                      <th className="p-2">Sinh viên B</th>
                       <th className="p-2">Phòng mục tiêu</th>
                       <th className="p-2">Thời gian</th>
                       <th className="p-2">Trạng thái</th>
@@ -107,9 +131,35 @@ const RoomTransferRequests: React.FC = () => {
 
                       return (
                         <tr key={r.id} className="border-b last:border-b-0">
-                          <td className="p-2 align-top max-w-[140px] truncate">{r.id}</td>
-                          <td className="p-2 align-top">{r.requester_user_id}</td>
-                          <td className="p-2 align-top">{r.target_user_id}</td>
+                          <td className="p-2 align-top max-w-[200px]">
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-xs text-gray-800 truncate">
+                                {revealedId === r.id ? r.id : maskId(r.id)}
+                              </span>
+                              <button
+                                type="button"
+                                className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
+                                onClick={() => handleCopyId(r.id)}
+                                title="Copy ID"
+                              >
+                                <Clipboard className="w-3 h-3 text-gray-600" />
+                              </button>
+                              <button
+                                type="button"
+                                className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
+                                onClick={() => handleRevealId(r.id)}
+                                title="Xem nhanh ID"
+                              >
+                                <Eye className="w-3 h-3 text-gray-600" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="p-2 align-top font-mono text-sm text-gray-800">
+                            {r.requester_username || r.requester_user_id}
+                          </td>
+                          <td className="p-2 align-top font-mono text-sm text-gray-800">
+                            {r.target_username || r.target_user_id}
+                          </td>
                           <td className="p-2 align-top">{r.target_room_id}</td>
                           <td className="p-2 align-top">
                             {new Date(r.transfer_time).toLocaleString("vi-VN")}

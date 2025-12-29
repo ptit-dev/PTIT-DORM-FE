@@ -4,8 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import {
   FacilityComplaint,
   getAllFacilityComplaints,
-  updateFacilityComplaint,
-  updateFacilityComplaintProof,
+  updateFacilityComplaintStatus,
   deleteFacilityComplaint,
 } from "@/features/auth/facilityComplaintApi";
 
@@ -115,6 +114,7 @@ const FacilityComplaints: React.FC = () => {
       const matchesSearch = search
         ? complaint.title.toLowerCase().includes(search) ||
           complaint.room_id.toLowerCase().includes(search) ||
+          (complaint.username && complaint.username.toLowerCase().includes(search)) ||
           (complaint.student_id && complaint.student_id.toLowerCase().includes(search))
         : true;
       return matchesStatus && matchesArea && matchesFloor && matchesSearch;
@@ -152,18 +152,9 @@ const FacilityComplaints: React.FC = () => {
     if (!selected) {
       return;
     }
-    if (!editTitle.trim()) {
-      // eslint-disable-next-line no-alert
-      alert("Tiêu đề không được để trống.");
-      return;
-    }
     setUpdateSubmitting(true);
     try {
-      const updated = await updateFacilityComplaint(selected.id, {
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-        status: editStatus,
-      });
+      const updated = await updateFacilityComplaintStatus(selected.id, editStatus);
       setDetailOpen(false);
       setSelected(null);
       setComplaints((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
@@ -178,38 +169,6 @@ const FacilityComplaints: React.FC = () => {
     } finally {
       setUpdateSubmitting(false);
     }
-  };
-
-  const handleUpdateProof = async (complaint: FacilityComplaint) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (changeEvent: Event) => {
-      const target = changeEvent.target as HTMLInputElement;
-      const file = target.files && target.files[0];
-      if (!file) {
-        return;
-      }
-      setUpdateSubmitting(true);
-      try {
-        const updated = await updateFacilityComplaintProof(complaint.id, file);
-        setComplaints((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-        if (selected && selected.id === updated.id) {
-          setSelected(updated);
-        }
-      } catch (updateError: unknown) {
-        if (updateError instanceof Error) {
-          // eslint-disable-next-line no-alert
-          alert(updateError.message);
-        } else {
-          // eslint-disable-next-line no-alert
-          alert("Đã xảy ra lỗi không xác định.");
-        }
-      } finally {
-        setUpdateSubmitting(false);
-      }
-    };
-    input.click();
   };
 
   const handleDelete = async () => {
@@ -348,7 +307,7 @@ const FacilityComplaints: React.FC = () => {
                       <th className="p-4 text-left">Mã</th>
                       <th className="p-4 text-left">Phòng</th>
                       <th className="p-4 text-left">Tiêu đề</th>
-                      <th className="p-4 text-left">Sinh viên</th>
+                      <th className="p-4 text-left">Mã sinh viên</th>
                       <th className="p-4 text-left">Minh chứng</th>
                       <th className="p-4 text-left">Trạng thái</th>
                       <th className="p-4 text-left">Ngày tạo</th>
@@ -370,8 +329,8 @@ const FacilityComplaints: React.FC = () => {
                         <td className="p-4 max-w-xs truncate">
                           {complaint.title}
                         </td>
-                        <td className="p-4 text-sm text-gray-700">
-                          {complaint.student_id}
+                        <td className="p-4 text-sm text-gray-700 font-mono">
+                          {complaint.username || complaint.student_id || "-"}
                         </td>
                         <td className="p-4">
                           {complaint.proof ? (
@@ -453,10 +412,10 @@ const FacilityComplaints: React.FC = () => {
                         Tiêu đề
                       </label>
                       <input
-                        className="border rounded px-3 py-2 w-full"
-                        value={editTitle}
-                        onChange={(event) => setEditTitle(event.target.value)}
-                        required
+                        className="border rounded px-3 py-2 w-full bg-gray-100 text-gray-700"
+                        value={selected.title}
+                        readOnly
+                        disabled
                       />
                     </div>
                     <div>
@@ -483,9 +442,10 @@ const FacilityComplaints: React.FC = () => {
                       Mô tả chi tiết
                     </label>
                     <textarea
-                      className="border rounded px-3 py-2 w-full min-h-[120px]"
-                      value={editDescription}
-                      onChange={(event) => setEditDescription(event.target.value)}
+                      className="border rounded px-3 py-2 w-full min-h-[120px] bg-gray-100 text-gray-700"
+                      value={selected.description || ""}
+                      readOnly
+                      disabled
                     />
                   </div>
                   <div>
@@ -493,44 +453,22 @@ const FacilityComplaints: React.FC = () => {
                       Minh chứng
                     </label>
                     {selected.proof ? (
-                      <div className="flex flex-col gap-3">
-                        <a
-                          href={selected.proof}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block"
-                        >
-                          <img
-                            src={selected.proof}
-                            alt="Ảnh minh chứng khiếu nại"
-                            className="mt-1 max-h-56 rounded border object-contain"
-                          />
-                        </a>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200"
-                            onClick={() => handleUpdateProof(selected)}
-                            disabled={updateSubmitting}
-                          >
-                            Cập nhật minh chứng
-                          </button>
-                        </div>
-                      </div>
+                      <a
+                        href={selected.proof}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block"
+                      >
+                        <img
+                          src={selected.proof}
+                          alt="Ảnh minh chứng khiếu nại"
+                          className="mt-1 max-h-56 rounded border object-contain"
+                        />
+                      </a>
                     ) : (
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <span className="text-gray-500 text-sm">
-                          Chưa có minh chứng đính kèm.
-                        </span>
-                        <button
-                          type="button"
-                          className="px-4 py-2 rounded bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200"
-                          onClick={() => handleUpdateProof(selected)}
-                          disabled={updateSubmitting}
-                        >
-                          Thêm minh chứng
-                        </button>
-                      </div>
+                      <span className="text-gray-500 text-sm">
+                        Chưa có minh chứng đính kèm. Minh chứng chỉ được sinh viên bổ sung khi khiếu nại ở trạng thái chờ xử lý.
+                      </span>
                     )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 mt-2">

@@ -76,7 +76,7 @@ const MENU_CONFIG = {
       icon: Users,
       to: "/admin-accounts",
     },
-    { to: "/roles", icon: User, label: "Phân quyền Hệ thống" },
+    { to: "/admin-accounts", icon: User, label: "Phân quyền Hệ thống" },
     { to: "/system-logs", icon: Layers, label: "Nhật ký hệ thống" },
     {
       label: "Sao lưu hệ thống",
