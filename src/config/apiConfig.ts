@@ -11,4 +11,5 @@
 // export const API_BASE_URL = "https://festinately-lardiest-cori.ngrok-free.dev/ptit-dorm/be"; 
 // export const WEBSOCKET_URL = "wss://festinately-lardiest-cori.ngrok-free.dev/ptit-dorm/ws/ws/v1/admin-connect";
 export const API_BASE_URL = "http://localhost:8999";
-export const WEBSOCKET_URL = "ws://localhost:8999/ws/v1/admin-connect";
+export const WEBSOCKET_BACKEND_URL = "ws://localhost:8999/ws/v1/admin-connect";
+export const WEBSOCKET_CHATBOT_URL = "wss://ptit-dorm-chatbot.azurewebsites.net/ws/chat";

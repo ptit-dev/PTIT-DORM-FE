@@ -10,7 +10,7 @@ const AdminSystemDashboard: React.FC<{ user: AdminUser }> = ({ user }) => {
   useEffect(() => {
     const token = localStorage.getItem("ptit_access_token");
     if (token) {
-      connectAdminSocket(token);
+      connectAdminSocket();
     }
     return () => {
       disconnectAdminSocket();
