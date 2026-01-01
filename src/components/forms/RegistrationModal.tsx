@@ -575,7 +575,9 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
                     />
                   ))}
                 </div>
-                <div className="mt-2 text-sm text-muted-foreground">OTP sẽ hết hạn sau <span className="font-bold">{timer}s</span></div>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  OTP sẽ hết hạn sau <span className="font-bold text-red-600">{Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}</span>
+                </div>
                 {otpError && <div className="text-destructive mt-2">{otpError} {otpTries > 0 && otpTries < 3 && `(Còn ${3-otpTries} lần)`}</div>}
                 <Button type="submit" variant="destructive" className="mt-4" disabled={isLoading || otp.length !== 6 || timer === 0 || otpTries >= 3}>
                   {isLoading ? "Đang xác thực..." : "Xác nhận OTP"}

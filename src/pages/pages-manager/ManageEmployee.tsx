@@ -1,12 +1,68 @@
 import React, { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
+import { AddressField } from "@/components/forms/AddressField";
+import { validateEmployeeField } from "@/utils/employeeValidation";
 import {
 	getManagers,
 	createManager,
 	updateManager,
 	deleteManager,
 } from "@/features/auth/managerApi";
+
+const ErrorMessage: React.FC<{ message?: string }> = ({ message }) => {
+	if (!message) return null;
+	return <span className="text-red-500 text-xs mt-1">{message}</span>;
+};
+
+interface FormFieldProps {
+	label: string;
+	name: string;
+	type?: string;
+	placeholder?: string;
+	required?: boolean;
+	disabled?: boolean;
+	readOnly?: boolean;
+	colSpan?: boolean;
+	value: string;
+	error?: string;
+	onChange: (value: string) => void;
+	helperText?: string;
+}
+
+const FormField: React.FC<FormFieldProps> = ({
+	label,
+	name,
+	type = "text",
+	placeholder,
+	required,
+	disabled,
+	readOnly,
+	colSpan,
+	value,
+	error,
+	onChange,
+	helperText
+}) => (
+	<div className={`flex flex-col gap-2 ${colSpan ? 'md:col-span-2' : ''}`}>
+		<label className="font-medium text-gray-700">
+			{label} {required && <span className="text-red-500">*</span>}
+		</label>
+		<input 
+			className={`border rounded px-3 py-2 ${readOnly ? 'bg-gray-100' : ''} ${error ? 'border-red-500' : ''}`}
+			type={type}
+			placeholder={placeholder || label}
+			required={required}
+			value={value}
+			onChange={(e) => onChange(e.target.value)}
+			disabled={disabled}
+			readOnly={readOnly}
+		/>
+		<ErrorMessage message={error} />
+		{helperText && <span className="text-gray-500 text-xs">{helperText}</span>}
+	</div>
+);
 
 const initialForm = {
 	fullname: "",
@@ -31,6 +87,8 @@ const ManageEmployee: React.FC = () => {
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [submitting, setSubmitting] = useState(false);
+	const [errors, setErrors] = useState<{ [key: string]: string }>({});
+	const [dialog, setDialog] = useState<{ open: boolean; type: 'error' | 'success'; title: string; description: string }>({ open: false, type: 'error', title: '', description: '' });
 	const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
 
 	const fetchManagers = async () => {
@@ -51,13 +109,15 @@ const ManageEmployee: React.FC = () => {
 
 	useEffect(() => {
 		fetchManagers();
-		// eslint-disable-next-line
 	}, []);
+
+
 
 	const openAdd = () => {
 		setEditId(null);
 		setForm(initialForm);
 		setAvatarFile(null);
+		setErrors({});
 		setModalOpen(true);
 	};
 	const openEdit = (m: { [key: string]: unknown }) => {
@@ -74,27 +134,52 @@ const ManageEmployee: React.FC = () => {
 			username: m.username as string,
 		});
 		setAvatarFile(null);
+		setErrors({});
 		setModalOpen(true);
 	};
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setSubmitting(true);
+		
+		const newErrors: { [key: string]: string } = {};
+		Object.keys(form).forEach(key => {
+			const error = validateEmployeeField(key, form[key as keyof typeof form]);
+			if (error) newErrors[key] = error;
+		});
+		
+		if (!editId && !avatarFile) {
+			newErrors.avatar = 'Ảnh đại diện bắt buộc khi tạo mới';
+		}
+		
+		setErrors(newErrors);
+		if (Object.keys(newErrors).length > 0) {
+			const errorMessages = Object.values(newErrors).join(', ');
+			setDialog({ open: true, type: 'error', title: 'Vui lòng kiểm tra lại các trường nhập liệu', description: errorMessages });
+			setSubmitting(false);
+			return;
+		}
+		
 		const data = new FormData();
-		Object.entries(form).forEach(([k, v]) => data.append(k, v));
+		Object.entries(form).forEach(([k, v]) => data.append(k, String(v)));
 		if (avatarFile) data.append("avatar", avatarFile);
+		
+		console.log("Form data being submitted:", Object.fromEntries(data.entries()));
+		
 		try {
 			if (editId) {
 				await updateManager(editId, data);
+				setDialog({ open: true, type: 'success', title: 'Thành công', description: 'Cập nhật thông tin nhân viên thành công' });
 			} else {
 				await createManager(data);
+				setDialog({ open: true, type: 'success', title: 'Thành công', description: 'Thêm nhân viên mới thành công' });
 			}
 			setModalOpen(false);
 			fetchManagers();
 		} catch (e: unknown) {
 			if (e instanceof Error) {
-				alert(e.message);
+				setDialog({ open: true, type: 'error', title: 'Có lỗi xảy ra', description: e.message });
 			} else {
-				alert("Đã xảy ra lỗi không xác định.");
+				setDialog({ open: true, type: 'error', title: 'Lỗi', description: 'Đã xảy ra lỗi không xác định' });
 			}
 		} finally {
 			setSubmitting(false);
@@ -105,14 +190,15 @@ const ManageEmployee: React.FC = () => {
 		setSubmitting(true);
 		try {
 			await deleteManager(deleteId);
+			setDialog({ open: true, type: 'success', title: 'Thành công', description: 'Xóa nhân viên thành công' });
 			setDeleteId(null);
 			setConfirmDelete(false);
 			fetchManagers();
 		} catch (e: unknown) {
 			if (e instanceof Error) {
-				alert(e.message);
+				setDialog({ open: true, type: 'error', title: 'Có lỗi xảy ra', description: e.message });
 			} else {
-				alert("Đã xảy ra lỗi không xác định.");
+				setDialog({ open: true, type: 'error', title: 'Lỗi', description: 'Đã xảy ra lỗi không xác định' });
 			}
 		} finally {
 			setSubmitting(false);
@@ -194,8 +280,26 @@ const ManageEmployee: React.FC = () => {
 								<form className={`space-y-6 ${submitting ? 'opacity-60 pointer-events-none' : ''}`} onSubmit={handleSubmit}>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div className="flex flex-col gap-2 md:col-span-2">
-											<label className="font-medium text-gray-700">Ảnh đại diện</label>
-											<input className="border rounded px-3 py-2" type="file" accept="image/*" onChange={e => setAvatarFile(e.target.files?.[0] || null)} disabled={submitting} />
+											<label className="font-medium text-gray-700">
+												Ảnh đại diện {!editId && <span className="text-red-500">*</span>}
+											</label>
+											<input 
+												className={`border rounded px-3 py-2 ${errors.avatar ? 'border-red-500' : ''}`} 
+												type="file" 
+												accept="image/*" 
+												onChange={e => {
+													const file = e.target.files?.[0] || null;
+													setAvatarFile(file);
+													if (!editId && !file) {
+														setErrors(prev => ({ ...prev, avatar: 'Ảnh đại diện bắt buộc khi tạo mới' }));
+													} else {
+														const { avatar, ...rest } = errors;
+														setErrors(rest);
+													}
+												}} 
+												disabled={submitting} 
+											/>
+											{errors.avatar && <span className="text-red-500 text-xs mt-1">{errors.avatar}</span>}
 											{avatarFile && (
 												<div className="flex items-center gap-2 mt-2">
 													<img src={URL.createObjectURL(avatarFile)} alt="avatar preview" className="w-16 h-16 rounded-full object-cover border" />
@@ -203,49 +307,146 @@ const ManageEmployee: React.FC = () => {
 												</div>
 											)}
 										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Họ tên</label>
-											<input className="border rounded px-3 py-2" placeholder="Họ tên" required value={form.fullname} onChange={e => setForm(f => ({ ...f, fullname: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Số điện thoại</label>
-											<input className="border rounded px-3 py-2" placeholder="Số điện thoại" required value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">CCCD</label>
-											<input className="border rounded px-3 py-2" placeholder="CCCD" required value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Ngày sinh</label>
-											<input className="border rounded px-3 py-2" type="date" placeholder="Ngày sinh" required value={form.dob} onChange={e => setForm(f => ({ ...f, dob: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Tỉnh/TP</label>
-											<input className="border rounded px-3 py-2" placeholder="Tỉnh/TP" required value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Xã/Phường</label>
-											<input className="border rounded px-3 py-2" placeholder="Xã/Phường" required value={form.commune} onChange={e => setForm(f => ({ ...f, commune: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2 md:col-span-2">
-											<label className="font-medium text-gray-700">Địa chỉ chi tiết</label>
-											<input className="border rounded px-3 py-2" placeholder="Địa chỉ chi tiết" required value={form.detail_address} onChange={e => setForm(f => ({ ...f, detail_address: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Email</label>
-											<input className="border rounded px-3 py-2" type="email" placeholder="Email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} disabled={submitting} />
-										</div>
-										<div className="flex flex-col gap-2">
-											<label className="font-medium text-gray-700">Tên đăng nhập</label>
-											<input className="border rounded px-3 py-2" placeholder="Tên đăng nhập" required value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} disabled={submitting} />
-										</div>
+										<FormField
+											label="Họ tên"
+											name="fullname"
+											value={form.fullname}
+											onChange={(value) => {
+												setForm(f => ({ ...f, fullname: value }));
+												const error = validateEmployeeField('fullname', value);
+												setErrors(prev => ({ ...prev, fullname: error }));
+											}}
+											error={errors.fullname}
+											required
+											disabled={submitting}
+										/>
+										<FormField
+											label="Số điện thoại"
+											name="phone"
+											value={form.phone}
+											onChange={(value) => {
+												setForm(f => ({ ...f, phone: value }));
+												const error = validateEmployeeField('phone', value);
+												setErrors(prev => ({ ...prev, phone: error }));
+											}}
+											error={errors.phone}
+											required
+											disabled={submitting}
+										/>
+										<FormField
+											label="CCCD"
+											name="cccd"
+											value={form.cccd}
+											onChange={(value) => {
+												setForm(f => ({ ...f, cccd: value }));
+												const error = validateEmployeeField('cccd', value);
+												setErrors(prev => ({ ...prev, cccd: error }));
+											}}
+											error={errors.cccd}
+											required
+											disabled={submitting}
+										/>
+										<FormField
+											label="Ngày sinh"
+											name="dob"
+											type="date"
+											value={form.dob}
+											onChange={(value) => {
+												setForm(f => ({ ...f, dob: value }));
+												const error = validateEmployeeField('dob', value);
+												setErrors(prev => ({ ...prev, dob: error }));
+											}}
+											error={errors.dob}
+											required
+											disabled={submitting}
+										/>
+										
+										<AddressField
+											provinceValue={form.province}
+											wardValue={form.commune}
+											onProvinceChange={(code, name) => {
+												setForm(f => ({ ...f, province: name, commune: '' }));
+												const error = validateEmployeeField('province', name);
+												setErrors(prev => ({ ...prev, province: error }));
+											}}
+											onWardChange={(code, name) => {
+												setForm(f => ({ ...f, commune: name }));
+												const error = validateEmployeeField('commune', name);
+												setErrors(prev => ({ ...prev, commune: error }));
+											}}
+											provinceError={errors.province}
+											wardError={errors.commune}
+											disabled={submitting}
+											required={true}
+										/>
+										
+										<FormField
+											label="Địa chỉ chi tiết"
+											name="detail_address"
+											value={form.detail_address}
+											onChange={(value) => {
+												setForm(f => ({ ...f, detail_address: value }));
+												const error = validateEmployeeField('detail_address', value);
+												setErrors(prev => ({ ...prev, detail_address: error }));
+											}}
+											error={errors.detail_address}
+											required
+											disabled={submitting}
+											colSpan
+										/>
+										<FormField
+											label="Email"
+											name="email"
+											type="email"
+											value={form.email}
+											onChange={(value) => {
+												setForm(f => ({ ...f, email: value }));
+												const error = validateEmployeeField('email', value);
+												setErrors(prev => ({ ...prev, email: error }));
+											}}
+											error={errors.email}
+											required
+											disabled={submitting}
+										/>
+										<FormField
+											label="Tên đăng nhập"
+											name="username"
+											value={form.username}
+											onChange={(value) => {
+												setForm(f => ({ ...f, username: value }));
+												const error = validateEmployeeField('username', value);
+												setErrors(prev => ({ ...prev, username: error }));
+											}}
+											error={errors.username}
+											required
+											disabled={submitting}
+											readOnly={!!editId}
+											helperText={editId ? "Tên đăng nhập không thể thay đổi" : undefined}
+										/>
 									</div>
 									<div className="flex justify-end gap-3 mt-8">
 										<button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setModalOpen(false)} disabled={submitting}>Hủy</button>
-										<button type="submit" className="px-6 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition flex items-center gap-2" disabled={submitting}>
-											{submitting && <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>}
-											{editId ? "Lưu" : "Thêm"}
-										</button>
+										{(() => {
+											const hasErrors = Object.keys(errors).some(key => errors[key]);
+											const hasEmptyFields = Object.keys(form).some(key => !form[key as keyof typeof form]);
+											const needsAvatar = !editId && !avatarFile;
+											const isFormValid = !hasErrors && !hasEmptyFields && !needsAvatar;
+											
+											return (
+												<button 
+													type="submit" 
+													className={`px-6 py-2 rounded font-semibold transition flex items-center gap-2 ${
+														isFormValid 
+															? 'bg-red-700 text-white hover:bg-red-800' 
+															: 'bg-gray-300 text-gray-500 cursor-not-allowed'
+													}`}
+													disabled={submitting || !isFormValid}
+												>
+													{submitting && <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>}
+													{editId ? "Lưu" : "Thêm"}
+												</button>
+											);
+										})()}
 									</div>
 								</form>
 							</div>
@@ -276,6 +477,14 @@ const ManageEmployee: React.FC = () => {
 					)}
 				</main>
 			</div>
+			
+			<NotificationDialog
+				open={dialog.open}
+				onOpenChange={(open) => setDialog({ ...dialog, open })}
+				title={dialog.title}
+				description={dialog.description}
+				type={dialog.type}
+			/>
 		</div>
 	);
 };
