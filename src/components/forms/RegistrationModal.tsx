@@ -466,18 +466,20 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
                       <SelectTrigger><SelectValue placeholder="Chọn đối tượng ưu tiên" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Không">Không</SelectItem>
-                        <SelectItem value="Người khuyết tật">Người khuyết tật</SelectItem>
-                        <SelectItem value="Hộ nghèo">Hộ nghèo</SelectItem>
-                        <SelectItem value="Hộ cận nghèo">Hộ cận nghèo</SelectItem>
-                        <SelectItem value="Dân tộc thiểu số">Dân tộc thiểu số</SelectItem>
+                        <SelectItem value="Gia đình có công với cách mạng">Gia đình có công với cách mạng</SelectItem>
+                        <SelectItem value="Cha/mẹ là người dân tộc thiểu số">Cha/mẹ là người dân tộc thiểu số</SelectItem>
+                        <SelectItem value="Thuộc đối tượng bảo trợ xã hội">Thuộc đối tượng bảo trợ xã hội</SelectItem>
+                        <SelectItem value="Có hộ khẩu thường trú tại vùng có điều kiện kinh tế, xã hội đặc biệt khó khăn">Có hộ khẩu thường trú tại vùng có điều kiện kinh tế, xã hội đặc biệt khó khăn</SelectItem>
+                        <SelectItem value="Thuộc diện gia đình hộ nghèo, hộ cận nghèo">Thuộc diện gia đình hộ nghèo, hộ cận nghèo</SelectItem>
+                        <SelectItem value="Sinh viên nữ, sinh viên tích cực tham gia các hoạt động do Học viện, Đoàn Thanh niên Cộng sản Hồ Chí Minh">Sinh viên nữ, sinh viên tích cực tham gia các hoạt động do Học viện, Đoàn Thanh niên Cộng sản Hồ Chí Minh</SelectItem>
                         <SelectItem value="Khác">Khác</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   {formData.priorityGroup && formData.priorityGroup !== "Không" && (
                     <div className="space-y-2">
-                      <Label htmlFor="priorityProof">Minh chứng ưu tiên</Label>
-                      <Input id="priorityProof" name="priorityProof" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={(e) => handleFileChange("priorityProof", e.target.files?.[0] || null)} className="cursor-pointer" />
+                      <Label htmlFor="priorityProof">Ảnh minh chứng ưu tiên</Label>
+                      <Input id="priorityProof" name="priorityProof" type="file" accept="image/*" onChange={(e) => handleFileChange("priorityProof", e.target.files?.[0] || null)} className="cursor-pointer" />
                       {formData.priorityProof && (
                         <div className="mt-2">
                           <span className="text-xs">Đã chọn: {formData.priorityProof.name}</span>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Eye, CheckCircle } from "lucide-react";
+import { Loader2, Eye, CheckCircle, Search, X, ArrowUpDown, FileText, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getDormApplications, approveDormApplication, getApprovedContracts } from "@/features/auth/api";
 import Header from "@/components/layout/Header";
@@ -13,7 +13,6 @@ import Sidebar from "@/components/layout/Sidebar";
 
 import { useNavigate } from "react-router-dom";
 
-// Định nghĩa kiểu dữ liệu cho nguyện vọng
 interface DormApplication {
   id: string;
   student_id: string;
@@ -59,8 +58,6 @@ interface RoomStat {
   floor: string;
 }
 
-
-
 const ApplicationList: React.FC = () => {
   const [applications, setApplications] = useState<DormApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,21 +68,39 @@ const ApplicationList: React.FC = () => {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [roomsError, setRoomsError] = useState<string | null>(null);
   const [approveLoading, setApproveLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [previewFile, setPreviewFile] = useState<{ url: string; type: string; title: string } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
 
   const filteredRoomsForSelectedApplication = useMemo(() => {
     if (!selected) return [] as RoomStat[];
-    // Lấy phòng đúng theo KTX mong muốn (preferred_dorm: B1, B2, B5, B0, ...)
     const areaId = selected.preferred_dorm || "";
     if (!areaId) return [] as RoomStat[];
     return roomStats.filter((r) => r.area_id === areaId);
   }, [roomStats, selected]);
 
-  // Check user and role
+  const filteredApplications = useMemo(() => {
+    const filtered = applications.filter((app) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        app.student_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        app.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || app.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
+  }, [applications, searchTerm, statusFilter, sortOrder]);
+
   useEffect(() => {
-    // Chỉ kiểm tra quyền và fetch data 1 lần khi mount
     if (!user || !user.roles || (!user.roles.includes("admin_system") && !user.roles.includes("manager"))) {
       navigate("/", { replace: true });
       return;
@@ -95,7 +110,6 @@ const ApplicationList: React.FC = () => {
       try {
         const data = await getDormApplications();
         setApplications(data);
-        // Chuẩn bị thống kê phòng giống trang Quản lý phòng ở
         setLoadingRooms(true);
         setRoomsError(null);
         const contracts = await getApprovedContracts();
@@ -122,7 +136,6 @@ const ApplicationList: React.FC = () => {
       }
     };
     fetchData();
-    // eslint-disable-next-line
   }, []);
 
   const handleApprove = async () => {
@@ -167,10 +180,53 @@ const ApplicationList: React.FC = () => {
       <div className="flex flex-1">
         <Sidebar roles={user?.roles} />
         <main className="flex-1 p-4 md:p-8 lg:p-10 ml-0 md:ml-72 transition-all duration-300">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8 text-red-700 text-center">Danh sách đơn nguyện vọng ký túc xá</h1>
+          <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow p-6">
+            <h1 className="text-3xl font-bold mb-6 text-red-700">Danh sách đơn nguyện vọng ký túc xá</h1>
+            
+            <div className="flex flex-wrap gap-4 mb-6">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Tìm theo mã SV, tên, nguyện vọng ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <select
+                className="border rounded-lg px-4 py-2 text-sm bg-white min-w-[150px]"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Chờ duyệt</option>
+                <option value="approved">Đã duyệt</option>
+                <option value="rejected">Đã hủy</option>
+              </select>
+              <button
+                type="button"
+                className="flex items-center gap-2 border rounded-lg px-4 py-2 text-sm bg-white hover:bg-gray-50"
+                onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                Ngày tạo: {sortOrder === "desc" ? "Mới nhất" : "Cũ nhất"}
+              </button>
+            </div>
+
             {loading ? (
               <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin w-8 h-8 text-red-600" /></div>
+            ) : filteredApplications.length === 0 ? (
+              <div className="text-gray-400 text-center py-10">
+                {applications.length === 0 ? "Chưa có đơn nguyện vọng nào." : "Không tìm thấy đơn phù hợp."}
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -179,31 +235,46 @@ const ApplicationList: React.FC = () => {
                       <th className="px-4 py-2 border-b">Mã SV</th>
                       <th className="px-4 py-2 border-b">Họ tên</th>
                       <th className="px-4 py-2 border-b">Giới tính</th>
-                      <th className="px-4 py-2 border-b">Khóa</th>
+                      <th className="px-4 py-2 border-b">Đối tượng ưu tiên</th>
                       <th className="px-4 py-2 border-b">Nguyện vọng</th>
                       <th className="px-4 py-2 border-b">Ngày tạo</th>
                       <th className="px-4 py-2 border-b">Trạng thái</th>
+                      <th className="px-4 py-2 border-b">Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {applications.map(app => (
-                      <tr key={app.id} className="hover:bg-red-50 cursor-pointer transition" onClick={() => { setSelected(app); setApproveRoom(""); }}>
-                        <td className="px-4 py-2 border-b text-center">{app.student_id}</td>
+                    {filteredApplications.map(app => (
+                      <tr key={app.id} className="hover:bg-red-50 transition">
+                        <td className="px-4 py-2 border-b text-center font-semibold text-blue-700">{app.student_id}</td>
                         <td className="px-4 py-2 border-b">{app.full_name}</td>
                         <td className="px-4 py-2 border-b text-center">{app.gender === "male" ? "Nam" : app.gender === "female" ? "Nữ" : app.gender}</td>
-                        <td className="px-4 py-2 border-b text-center">{app.course}</td>
+                        <td className="px-4 py-2 border-b text-center">
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                            {app.priority_group || "Không"}
+                          </span>
+                        </td>
                         <td className="px-4 py-2 border-b text-center">{app.preferred_site} - {app.preferred_dorm}</td>
-                        <td className="px-4 py-2 border-b text-center">{new Date(app.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 border-b text-center">{new Date(app.created_at).toLocaleDateString("vi-VN")}</td>
                         <td className="px-4 py-2 border-b text-center">
                           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${app.status === "pending" ? "bg-yellow-100 text-yellow-800" : app.status === "approved" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}>{app.status === "pending" ? "Chờ duyệt" : app.status === "approved" ? "Đã duyệt" : app.status}</span>
+                        </td>
+                        <td className="px-4 py-2 border-b text-center">
+                          <button 
+                            className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700" 
+                            onClick={() => { setSelected(app); setApproveRoom(""); }}
+                          >
+                            Xem chi tiết
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                <div className="p-4 text-sm text-gray-500">
+                  Hiển thị {filteredApplications.length} / {applications.length} đơn nguyện vọng
+                </div>
               </div>
             )}
-            {/* Modal xem chi tiết và duyệt */}
             <Dialog
               open={!!selected}
               onOpenChange={(open) => {
@@ -231,133 +302,140 @@ const ApplicationList: React.FC = () => {
 
                 {selected && step === 1 && (
                   <form className="space-y-6 mt-4">
-                    {/* Ảnh giấy tờ */}
                     <div className="flex flex-wrap gap-8 items-center justify-center mb-2">
                       {selected.avatar_front && (
                         <div className="flex flex-col items-center">
-                          <img src={selected.avatar_front} alt="CCCD mặt trước" className="w-40 h-56 rounded border object-cover shadow" />
+                          <img 
+                            src={selected.avatar_front} 
+                            alt="CCCD mặt trước" 
+                            className="text-lg w-40 h-56 rounded border object-cover shadow cursor-pointer hover:opacity-80 transition" 
+                            onClick={() => setPreviewFile({ url: selected.avatar_front, type: 'image', title: 'CCCD mặt trước' })}
+                          />
                           <span className="mt-2 text-xs text-gray-600">CCCD mặt trước</span>
                         </div>
                       )}
                       {selected.avatar_back && (
                         <div className="flex flex-col items-center">
-                          <img src={selected.avatar_back} alt="CCCD mặt sau" className="w-40 h-56 rounded border object-cover shadow" />
+                          <img 
+                            src={selected.avatar_back} 
+                            alt="CCCD mặt sau" 
+                            className="text-lg w-40 h-56 rounded border object-cover shadow cursor-pointer hover:opacity-80 transition" 
+                            onClick={() => setPreviewFile({ url: selected.avatar_back, type: 'image', title: 'CCCD mặt sau' })}
+                          />
                           <span className="mt-2 text-xs text-gray-600">CCCD mặt sau</span>
                         </div>
                       )}
                       {selected.priority_proof && (
                         <div className="flex flex-col items-center">
-                          <img src={selected.priority_proof} alt="Minh chứng ưu tiên" className="w-40 h-56 rounded border object-cover shadow" />
+                          <img 
+                            src={selected.priority_proof} 
+                            alt="Minh chứng ưu tiên" 
+                            className="w-40 h-56 rounded border object-cover shadow cursor-pointer hover:opacity-80 transition" 
+                            onClick={() => setPreviewFile({ url: selected.priority_proof, type: 'image', title: 'Minh chứng ưu tiên' })}
+                          />
                           <span className="mt-2 text-xs text-gray-600">Minh chứng ưu tiên</span>
                         </div>
                       )}
                     </div>
-                    {/* Thông tin cá nhân: 3 trường 1 hàng */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Mã sinh viên</label>
-                        <Input value={selected.student_id} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Mã sinh viên</label>
+                        <Input value={selected.student_id} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Họ tên</label>
-                        <Input value={selected.full_name} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Họ tên</label>
+                        <Input value={selected.full_name} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Ngày sinh</label>
-                        <Input value={new Date(selected.dob).toLocaleDateString()} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Ngày sinh</label>
+                        <Input value={new Date(selected.dob).toLocaleDateString()} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
-                    {/* Giới tính, CCCD, Ngày cấp: 3 trường 1 hàng */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Giới tính</label>
-                        <Input value={selected.gender === "male" ? "Nam" : selected.gender === "female" ? "Nữ" : selected.gender} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Giới tính</label>
+                        <Input value={selected.gender === "male" ? "Nam" : selected.gender === "female" ? "Nữ" : selected.gender} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">CCCD</label>
-                        <Input value={selected.cccd} readOnly disabled />
+                        <label className="font-semibold text-gray-800">CCCD</label>
+                        <Input value={selected.cccd} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Ngày cấp</label>
-                        <Input value={selected.cccd_issue_date ? new Date(selected.cccd_issue_date).toLocaleDateString() : ""} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Ngày cấp</label>
+                        <Input value={selected.cccd_issue_date ? new Date(selected.cccd_issue_date).toLocaleDateString() : ""} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="font-semibold">Nơi cấp</label>
-                      <Input value={selected.cccd_issue_place} readOnly disabled />
+                      <label className="font-semibold text-gray-800">Nơi cấp</label>
+                      <Input value={selected.cccd_issue_place} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                     </div>
-                    {/* Thông tin liên hệ */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Số điện thoại</label>
-                        <Input value={selected.phone} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Số điện thoại</label>
+                        <Input value={selected.phone} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Email</label>
-                        <Input value={selected.email} readOnly disabled />
-                      </div>
-                    </div>
-                    {/* Thông tin học tập */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="font-semibold">Lớp</label>
-                        <Input value={selected.class} readOnly disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="font-semibold">Khóa</label>
-                        <Input value={selected.course} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Email</label>
+                        <Input value={selected.email} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Hệ đào tạo</label>
-                        <Input value={selected.admission_type} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Lớp</label>
+                        <Input value={selected.class} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Ngành học</label>
-                        <Input value={selected.faculty} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Khóa</label>
+                        <Input value={selected.course} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
-                    {/* Thông tin cá nhân bổ sung */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Dân tộc</label>
-                        <Input value={selected.ethnicity} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Hệ đào tạo</label>
+                        <Input value={selected.admission_type} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Tôn giáo</label>
-                        <Input value={selected.religion} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Ngành học</label>
+                        <Input value={selected.faculty} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="font-semibold text-gray-800">Dân tộc</label>
+                        <Input value={selected.ethnicity} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="font-semibold text-gray-800">Tôn giáo</label>
+                        <Input value={selected.religion} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="font-semibold">Quê quán</label>
-                      <Input value={selected.hometown} readOnly disabled />
+                      <label className="font-semibold text-gray-800">Quê quán</label>
+                      <Input value={selected.hometown} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                     </div>
-                    {/* Thông tin người bảo lãnh */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Người bảo lãnh</label>
-                        <Input value={selected.guardian_name} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Người bảo lãnh</label>
+                        <Input value={selected.guardian_name} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">SĐT người bảo lãnh</label>
-                        <Input value={selected.guardian_phone} readOnly disabled />
+                        <label className="font-semibold text-gray-800">SĐT người bảo lãnh</label>
+                        <Input value={selected.guardian_phone} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
-                    {/* Thông tin ưu tiên và nguyện vọng */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="font-semibold">Đối tượng ưu tiên</label>
-                        <Input value={selected.priority_group} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Đối tượng ưu tiên</label>
+                        <Input value={selected.priority_group} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                       <div className="space-y-2">
-                        <label className="font-semibold">Nguyện vọng</label>
-                        <Input value={`${selected.preferred_site} - ${selected.preferred_dorm}`} readOnly disabled />
+                        <label className="font-semibold text-gray-800">Nguyện vọng</label>
+                        <Input value={`${selected.preferred_site} - ${selected.preferred_dorm}`} readOnly disabled className="disabled:text-gray-600 disabled:opacity-100" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="font-semibold">Ghi chú</label>
-                      <Textarea value={selected.notes} readOnly disabled rows={2} />
+                      <label className="font-semibold text-gray-800">Ghi chú</label>
+                      <Textarea value={selected.notes} readOnly disabled rows={2} className="disabled:text-gray-600 disabled:opacity-100" />
                     </div>
                     {selected.status === "pending" ? (
                       <div className="flex flex-col md:flex-row gap-4 items-center justify-end mt-6">
@@ -492,6 +570,36 @@ const ApplicationList: React.FC = () => {
                 )}
               </DialogContent>
             </Dialog>
+
+          <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+            <DialogContent className="max-w-5xl w-full max-h-[95vh] p-0 overflow-hidden">
+              <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0 pr-12"> 
+                <DialogTitle className="text-lg font-semibold text-red-700 truncate pr-4">
+                  {previewFile?.title}
+                </DialogTitle>
+                
+                <a
+                  href={previewFile?.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-lg font-semibold text-red-700 hover:text-red-800 transition-colors whitespace-nowrap"
+                >
+                  Mở tab mới
+                </a>
+              </DialogHeader>
+              <div className="flex-1 overflow-auto bg-gray-100" style={{ height: 'calc(95vh - 80px)' }}>
+                {previewFile?.type === 'image' && (
+                  <div className="flex items-center justify-center p-4 min-h-full">
+                    <img 
+                      src={previewFile.url} 
+                      alt={previewFile.title} 
+                      className="max-w-full max-h-full object-contain rounded shadow-lg"
+                    />
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           </div>
         </main>
       </div>
@@ -500,3 +608,4 @@ const ApplicationList: React.FC = () => {
 };
 
 export default ApplicationList;
+
