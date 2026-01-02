@@ -47,7 +47,7 @@ const getCommonContentHtml = (contract: Contract) => {
           <td style="text-align: center;">
             <h3 style="font-size: 14pt; margin: 0; font-weight: bold; text-transform: uppercase;">HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG</h3>
             <p style="margin: 0; font-size: 12pt;">Km10, Đường Nguyễn Trãi, Hà Đông, Hà Nội</p>
-            <p style="margin: 0; font-size: 12pt;">Tel: 024-33525248 (B5); 33510435 (B2), 33501463 (B1)</p>
+            <p style="margin: 0; font-size: 12pt;">Tel: 024-33525248 (B5); 033510435 (B2), 033501463 (B1)</p>
           </td>
         </tr>
         <tr>
