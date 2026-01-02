@@ -39,7 +39,6 @@ const ContractCard: React.FC<ContractCardProps> = ({
 
 	const codeId = String(contract.code ?? contract.id);
 
-	// Format date ngắn gọn: 01/01/26
 	const formatShortDate = (dateStr: string | undefined) => {
 		if (!dateStr) return "";
 		const d = new Date(dateStr);
@@ -48,7 +47,6 @@ const ContractCard: React.FC<ContractCardProps> = ({
 
 	return (
 		<div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-3 hover:shadow-lg hover:border-red-200 transition-all duration-200">
-			{/* Row 1: Room + Amount + Badges */}
 			<div className="flex items-center justify-between gap-2 mb-2">
 				<div className="flex items-center gap-2 min-w-0">
 					<div className="w-9 h-9 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -65,7 +63,6 @@ const ContractCard: React.FC<ContractCardProps> = ({
 				</div>
 			</div>
 
-			{/* Row 2: Time range */}
 			<div className="flex items-center gap-2 mb-2 text-xs">
 				<div className="flex-1 bg-gray-50 rounded px-2 py-1.5 flex items-center justify-center gap-1">
 					<span className="text-gray-400">Từ</span>
@@ -83,7 +80,6 @@ const ContractCard: React.FC<ContractCardProps> = ({
 				</div>
 			</div>
 
-			{/* Row 3: Contract Code */}
 			<div className="bg-gray-50 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 mb-2">
 				<span className="text-[10px] text-gray-400 flex-shrink-0">Mã HĐ:</span>
 				<span className="text-xs font-mono font-semibold text-gray-700 truncate flex-1" title={isCodeVisible ? codeId : undefined}>
@@ -97,7 +93,6 @@ const ContractCard: React.FC<ContractCardProps> = ({
 				</button>
 			</div>
 
-			{/* Action Button */}
 			<button
 				type="button"
 				className="w-full px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-medium hover:from-red-700 hover:to-red-800 transition-all shadow-sm flex items-center justify-center gap-1"

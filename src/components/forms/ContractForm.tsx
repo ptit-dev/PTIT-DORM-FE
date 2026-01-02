@@ -33,14 +33,10 @@ const formatCurrency = (amount?: number) => {
   return amount ? amount.toLocaleString('vi-VN') : '0';
 };
 
-/**
- * Hàm tạo nội dung HTML dùng chung cho cả Web và Word
- */
 const getCommonContentHtml = (contract: Contract) => {
   const info = contract.dorm_application;
   const today = new Date();
   
-  // Tách Tòa - Phòng từ chuỗi dạng "B5-101" hoặc fallback về trường riêng lẻ
   const roomParts = contract.room?.split('-') || [];
   const toa = roomParts[0] || contract.building || '.....';
   const phong = roomParts[1] || (roomParts.length === 1 ? roomParts[0] : '.....');
@@ -190,7 +186,6 @@ const ContractPreview: React.FC<ContractPreviewProps> = ({ contract, onBack }) =
       const contractCode = String(contract.code || contract.id);
       const innerHtml = getCommonContentHtml(contract);
       
-      // Bọc HTML vào cấu trúc file Word chuẩn
       const fullHtml = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
           <head>

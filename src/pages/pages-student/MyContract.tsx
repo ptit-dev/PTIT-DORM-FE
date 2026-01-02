@@ -30,7 +30,6 @@ const MyContract: React.FC = () => {
 
 	const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
 
-	// Stats
 	const totalContracts = contracts.length;
 	const activeContracts = contracts.filter((c) => c.status === "approved").length;
 	const unpaidContracts = contracts.filter((c) => c.status_payment === "unpaid").length;
@@ -72,7 +71,6 @@ const MyContract: React.FC = () => {
 
 	const handlePaymentSuccess = () => {
 		setSelectedContract(null);
-		// Refresh contracts
 		getMyContracts().then(setContracts).catch(console.error);
 	};
 

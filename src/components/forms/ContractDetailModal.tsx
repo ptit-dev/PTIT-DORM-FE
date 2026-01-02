@@ -1,29 +1,8 @@
 import React, { useState } from "react";
-import {
-	X,
-	Eye,
-	EyeOff,
-	Copy,
-	Check,
-	FileText,
-	ZoomIn,
-	ArrowLeft,
-	CreditCard,
-	XCircle,
-	Calendar,
-	User,
-	Home,
-	Phone,
-	Mail,
-	MapPin,
-	Award,
-	GraduationCap,
-	Building,
-} from "lucide-react";
+import { X, Eye, EyeOff, Copy, Check, FileText, ZoomIn, ArrowLeft, CreditCard, XCircle, Calendar, User, Home, Phone, Mail, MapPin, Award, GraduationCap, Building } from "lucide-react";
 import { confirmContract } from "@/features/auth/studentContractApi";
 import { useToast } from "@/hooks/use-toast";
 import ContractPreview from "./ContractForm";
-import { DormApplication } from "@/model/DormApplication";
 import { Contract, NullableStringFromDB } from "@/model/Contract";
 
 type LocalCancelStatus = "pending" | "approved" | "rejected";
@@ -173,7 +152,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2">
 			<div className="bg-white rounded-2xl shadow-2xl w-[85%] max-w-[1400px] h-[96vh] overflow-hidden relative flex flex-col">
-				{/* Close Button */}
 				<button
 					className="absolute top-3 right-3 z-10 text-gray-400 hover:text-red-600 transition bg-white rounded-full p-1.5 shadow"
 					onClick={onClose}
@@ -212,14 +190,10 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 					</div>
 				</div>
 
-				{/* Content */}
 				<div className="overflow-y-auto flex-1 p-4 bg-gray-50">
-					{/* Tab: Detail */}
 					{activeTab === "detail" && (
 						<div className="space-y-3">
-							{/* Contract Info Card */}
 							<div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-								{/* Code + Status Row */}
 								<div className="flex items-center justify-between mb-">
 									<div className="flex items-center gap-2">
 										<span className="text-xs text-gray-500">Mã HĐ:</span>
@@ -243,7 +217,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 									</div>
 								</div>
 
-								{/* 3 Info Cards */}
 								<div className="grid grid-cols-3 gap-3">
 									<div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-100">
 										<div className="text-xs text-gray-400 mb-1">Phòng</div>
@@ -262,9 +235,7 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 								</div>
 							</div>
 
-							{/* Two Column Layout */}
 							<div className="flex flex-col lg:flex-row gap-3">
-								{/* Left: Student Info + Note */}
 								<div className="lg:w-[80%] flex flex-col">
 									<div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex-1">
 										<h4 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2 pb-2 border-b border-gray-100">
@@ -286,7 +257,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 											<div className="text-gray-500 italic text-sm py-4 text-center">Không có thông tin sinh viên</div>
 										)}
 
-										{/* Note - Ghi chú luôn hiển thị */}
 										<div className="mt-3 pt-3 border-t border-gray-100">
 											<h4 className="text-sm font-bold text-black-700 mb-1 flex items-center gap-2">
 												<FileText size={14} className="text-black-500" />
@@ -297,9 +267,7 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 									</div>
 								</div>
 
-								{/* Right: Images + Actions */}
 								<div className="lg:w-[30%] flex flex-col">
-									{/* Images Grid */}
 									<div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex-1">
 										<h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2 pb-2 border-b border-gray-100">
 											<FileText size={16} className="text-red-500" />
@@ -337,7 +305,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 								</div>
 							</div>
 
-							{/* Xem hợp đồng - Center bottom */}
 							{contract.status_payment === "paid" && (
 								<div className="mt-3 flex justify-center">
 									<button
@@ -349,7 +316,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 								</div>
 							)}
 
-							{/* Quick Actions */}
 							{contract.status_payment === "unpaid" && (
 								<div className="mt-3 flex justify-center">
 									<button
@@ -364,12 +330,10 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 						</div>
 					)}
 
-					{/* Tab: Preview */}
 					{activeTab === "preview" && (
 						<ContractPreview contract={contract} onBack={() => setActiveTab("detail")} />
 					)}
 
-					{/* Tab: Payment */}
 					{activeTab === "payment" && (
 						<div className="max-w-xl mx-auto">
 							<div className="flex items-center gap-3 mb-4">
@@ -437,7 +401,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 						</div>
 					)}
 
-					{/* Tab: Cancel Request */}
 					{activeTab === "cancel" && (
 						<div className="max-w-xl mx-auto">
 							<div className="flex items-center gap-3 mb-4">
@@ -517,7 +480,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 				</div>
 			</div>
 
-			{/* Image Preview Modal */}
 			{selectedImage && (
 				<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={() => setSelectedImage(null)}>
 					<div className="relative max-w-4xl max-h-[85vh]">
@@ -532,7 +494,6 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 	);
 };
 
-// Helper Component
 const InfoRow: React.FC<{ icon: React.ElementType; label: string; value?: string }> = ({ icon: Icon, label, value }) => (
 	<div className="flex items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-lg">
 		<Icon size={14} className="text-red-400 flex-shrink-0" />
