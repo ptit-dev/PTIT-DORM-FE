@@ -2,44 +2,42 @@ import React from "react";
 interface User {
   id: string;
   name: string;
-  // Add other properties as needed
 }
 
 const ManagerDashboard: React.FC<{ user: User }> = ({ user }) => (
   <>
-    <h2 className="text-2xl font-bold mb-6 text-primary">Dashboard quản trị hệ thống</h2>
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
-        <span className="text-4xl font-bold text-blue-600">1,250</span>
-        <span className="mt-2 text-gray-600">Tài khoản đang sử dụng</span>
+   <h2 className="text-2xl font-bold mb-6 text-primary">Dashboard quản lý kí túc xá</h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+          <span className="text-4xl font-bold text-blue-600">80</span>
+          <span className="mt-2 text-gray-600">Sinh viên đang lưu trú</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+          <span className="text-4xl font-bold text-yellow-600">50</span>
+          <span className="mt-2 text-gray-600">Nguyện vọng chờ duyệt</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+          <span className="text-4xl font-bold text-red-600">0</span>
+          <span className="mt-2 text-gray-600">Hợp đồng bị khóa</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+          <span className="text-4xl font-bold text-green-600">4</span>
+          <span className="mt-2 text-gray-600">Yêu cầu dịch vụ</span>
+        </div>
       </div>
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
-        <span className="text-4xl font-bold text-yellow-600">23</span>
-        <span className="mt-2 text-gray-600">Chờ duyệt</span>
-      </div>
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
-        <span className="text-4xl font-bold text-red-600">7</span>
-        <span className="mt-2 text-gray-600">Bị khóa</span>
-      </div>
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
-        <span className="text-4xl font-bold text-green-600">4</span>
-        <span className="mt-2 text-gray-600">Yêu cầu hỗ trợ</span>
-      </div>
-    </div>
-    <section className="mb-8">
-      <h3 className="font-bold text-lg mb-2 text-blue-700">Quyền hạn của bạn</h3>
-      <div className="bg-white rounded-lg shadow p-4 text-gray-700 text-sm">
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Quản lý toàn bộ tài khoản hệ thống</li>
-          <li>Phê duyệt, khóa/mở khóa tài khoản</li>
-          <li>Phân quyền, cập nhật thông tin người dùng</li>
-          <li>Xem lịch sử hoạt động, nhật ký hệ thống</li>
-          <li>Tiếp nhận và xử lý yêu cầu hỗ trợ tài khoản</li>
-        </ul>
-      </div>
+      <section className="mb-8">
+        <h3 className="font-bold text-lg mb-2 text-blue-700">Quyền hạn của bạn</h3>
+        <div className="bg-white rounded-lg shadow p-4 text-gray-700 text-sm">
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Quản lý nguyện vọng, hợp đồng của sinh viên</li>
+            <li>Quản lý các cán bộ quản túc</li>
+            <li>Quản lý thông tin các tòa kí túc xá</li>
+            <li>Tiếp nhận và xử lý yêu cầu dịch vụ nội trú</li>
+          </ul>
+        </div>
     </section>
     <section className="mb-8">
-      <h3 className="font-bold text-lg mb-2 text-red-700">Yêu cầu liên quan đến tài khoản</h3>
+      <h3 className="font-bold text-lg mb-2 text-red-700">Yêu cầu liên quan đến nội trú</h3>
       <div className="bg-white rounded-lg shadow p-4 text-gray-700 text-sm">
         <ul className="list-disc pl-5 space-y-1">
           <li>5 tài khoản yêu cầu mở khóa</li>

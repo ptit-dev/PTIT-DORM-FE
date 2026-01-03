@@ -51,7 +51,6 @@ const ManageEmployee: React.FC = () => {
 
 	useEffect(() => {
 		fetchManagers();
-		// eslint-disable-next-line
 	}, []);
 
 	const openAdd = () => {
@@ -178,7 +177,6 @@ const ManageEmployee: React.FC = () => {
 							</div>
 						)}
 					</div>
-					{/* Modal thêm/sửa nhân viên */}
 					{modalOpen && (
 						<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
 							<div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-10 relative">
@@ -251,7 +249,6 @@ const ManageEmployee: React.FC = () => {
 							</div>
 						</div>
 					)}
-					{/* Modal xác nhận xóa */}
 					{confirmDelete && (
 						<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
 							<div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
