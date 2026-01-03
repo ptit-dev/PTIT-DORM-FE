@@ -1,5 +1,6 @@
 export interface DormApplication {
   id: string;
+  username?: string;
   student_id: string;
   full_name: string;
   dob: string;
@@ -9,14 +10,32 @@ export interface DormApplication {
   cccd_issue_place: string;
   phone: string;
   email: string;
-  avatar_front: string;
-  avatar_back: string;
+  avatar_front?: string;
+  avatar_back?: string;
   class: string;
-  course: string;
+  course?: string;
   faculty: string;
-  ethnicity: string;
-  religion: string;
+  ethnicity?: string;
+  religion?: string;
   hometown: string;
-  guardian_name: string;
-  guardian_phone: string;
+  place_of_birth?: string;
+  training_system?: string;
+  guardian_name?: string;
+  guardian_phone?: string;
+  guardian_address?: string;
+  father_name?: string;
+  father_phone?: string;
+  mother_name?: string;
+  mother_phone?: string;
+  relative_name?: string;
+  relative_address?: string;
+  priority_group?: string;
+  priority_proof?: string;
+  preferred_site?: string;
+  preferred_dorm?: string;
+  admission_type?: string;
+  status?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }

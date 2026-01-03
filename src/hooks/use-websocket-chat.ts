@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { WEBSOCKET_CHATBOT_URL } from '@/config/apiConfig';
 
-const WEBSOCKET_URL = "wss://ptit-dorm-chatbot.azurewebsites.net/ws/chat";
 const BROADCAST_CHANNEL = "chatbot-channel";
 const LEADER_KEY = "chatbot-leader";
 const MESSAGES_KEY = "chatbot-messages";
@@ -109,7 +109,7 @@ export const useWebSocketChat = () => {
     isLeader.current = true;
 
     if (!sharedConnection || sharedConnection.readyState === WebSocket.CLOSED) {
-      sharedConnection = new WebSocket(WEBSOCKET_URL);
+      sharedConnection = new WebSocket(WEBSOCKET_CHATBOT_URL);
 
       sharedConnection.onopen = () => {
         sharedMessages = sharedMessages.filter(msg => 

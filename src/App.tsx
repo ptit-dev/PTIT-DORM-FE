@@ -19,7 +19,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import ApplicationList from "./pages/pages-manager/ApplicationList";
 import RegistrationPeriod from "./pages/pages-manager/Registration_Period";
-import MyContract from "./pages/pages-student/my_contract";
+import MyContract from "./pages/pages-student/MyContract";
 import ManageEmployee from "./pages/pages-manager/ManageEmployee";
 import ManageRooms from "./pages/pages-manager/ManageRooms";
 import DutySchedule from "./pages/pages-manager/DutySchedule";

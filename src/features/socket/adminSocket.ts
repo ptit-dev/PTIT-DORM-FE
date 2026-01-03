@@ -1,9 +1,9 @@
 let ws: WebSocket | null = null;
-import { WEBSOCKET_URL } from "../../config/apiConfig";
+import { WEBSOCKET_BACKEND_URL } from "../../config/apiConfig";
 export function connectAdminSocket(onMessage?: (event: MessageEvent) => void) {
   if (ws) ws.close();
   const token = localStorage.getItem("ptit_access_token");
-  const wsUrl = token ? `${WEBSOCKET_URL}?token=${token}` : WEBSOCKET_URL;
+  const wsUrl = token ? `${WEBSOCKET_BACKEND_URL}?token=${token}` : WEBSOCKET_BACKEND_URL;
   ws = new window.WebSocket(wsUrl);
   ws.onopen = () => {
     console.log("WebSocket connected");
