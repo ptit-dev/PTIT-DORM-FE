@@ -200,9 +200,9 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess }: LoginModalProps) => {
                         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
                       return base64;
                     }
-                    const clientId = "75dc578e-179c-4375-8408-807e01f8153c"; // Thay bằng clientId thực tế
-                    const tenant = "common"; // hoặc tenantId
-                    const redirectUri = "http://localhost:3000/oauth-callback"; // Thay bằng redirectUri thực tế
+                    const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID as string;
+                    const redirectUri = import.meta.env.VITE_MICROSOFT_REDIRECT_URI as string;
+                    const tenant = "common";
                     const scope = "openid profile email User.Read";
                     const codeVerifier = generateCodeVerifier();
                     const codeChallenge = await generateCodeChallenge(codeVerifier);

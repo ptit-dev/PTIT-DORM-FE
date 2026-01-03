@@ -10,6 +10,6 @@
 // Cấu hình endpoint API backend development
 // export const API_BASE_URL = "https://festinately-lardiest-cori.ngrok-free.dev/ptit-dorm/be"; 
 // export const WEBSOCKET_URL = "wss://festinately-lardiest-cori.ngrok-free.dev/ptit-dorm/ws/ws/v1/admin-connect";
-export const API_BASE_URL = "http://localhost:8999";
-export const WEBSOCKET_BACKEND_URL = "ws://localhost:8999/ws/v1/admin-connect";
-export const WEBSOCKET_CHATBOT_URL = "wss://ptit-dorm-chatbot.azurewebsites.net/ws/chat";
+export const API_BASE_URL =import.meta.env.VITE_API_BASE_URL as string;
+export const WEBSOCKET_BACKEND_URL = import.meta.env.VITE_WEBSOCKET_BACKEND_URL as string;
+export const WEBSOCKET_CHATBOT_URL = import.meta.env.VITE_CHATBOT_WEBSOCKET_URL as string;

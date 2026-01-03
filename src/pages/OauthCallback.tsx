@@ -19,9 +19,9 @@ const OauthCallback = () => {
 		}
 		const fetchTokenAndProfile = async () => {
 			try {
-				const clientId = "75dc578e-179c-4375-8408-807e01f8153c"; // Thay bằng clientId thực tế
-				const tenant = "common"; // hoặc tenantId
-				const redirectUri = "http://localhost:3000/oauth-callback"; // Thay bằng redirectUri thực tế
+				const clientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID as string;
+				const tenant = "common";
+				const redirectUri = import.meta.env.VITE_MICROSOFT_REDIRECT_URI as string;
 				const codeVerifier = localStorage.getItem("ms_code_verifier");
 				if (!codeVerifier) throw new Error("Không tìm thấy code_verifier PKCE");
 
