@@ -72,6 +72,7 @@ const ApplicationList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [previewFile, setPreviewFile] = useState<{ url: string; type: string; title: string } | null>(null);
+  const [dormFilter, setDormFilter] = useState<string>("all");
   const { toast } = useToast();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
@@ -83,6 +84,24 @@ const ApplicationList: React.FC = () => {
     return roomStats.filter((r) => r.area_id === areaId);
   }, [roomStats, selected]);
 
+  const dormOptions = useMemo(() => {
+    const set = new Set<string>();
+    dormData.dorms.forEach((dorm: DormConfig) => {
+      if (dorm.area_id) set.add(dorm.area_id);
+    });
+    return Array.from(set).sort();
+  }, []);
+
+  const applicationStats = useMemo(
+    () => ({
+      total: applications.length,
+      pending: applications.filter((a) => a.status === "pending").length,
+      approved: applications.filter((a) => a.status === "approved").length,
+      rejected: applications.filter((a) => a.status === "rejected").length,
+    }),
+    [applications],
+  );
+
   const filteredApplications = useMemo(() => {
     const filtered = applications.filter((app) => {
       const matchesSearch =
@@ -91,7 +110,8 @@ const ApplicationList: React.FC = () => {
         app.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.email?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesDorm = dormFilter === "all" || app.preferred_dorm === dormFilter;
+      return matchesSearch && matchesStatus && matchesDorm;
     });
     return [...filtered].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
@@ -182,6 +202,25 @@ const ApplicationList: React.FC = () => {
         <main className="flex-1 p-4 md:p-8 lg:p-10 ml-0 md:ml-72 transition-all duration-300">
           <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow p-6">
             <h1 className="text-3xl font-bold mb-6 text-red-700">Danh sách đơn nguyện vọng ký túc xá</h1>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 text-sm">
+              <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Tổng số đơn</span>
+                <span className="mt-1 text-xl font-semibold text-red-700">{applicationStats.total}</span>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Chờ duyệt</span>
+                <span className="mt-1 text-xl font-semibold text-amber-600">{applicationStats.pending}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Đã duyệt</span>
+                <span className="mt-1 text-xl font-semibold text-emerald-600">{applicationStats.approved}</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Đã hủy</span>
+                <span className="mt-1 text-xl font-semibold text-gray-700">{applicationStats.rejected}</span>
+              </div>
+            </div>
             
             <div className="flex flex-wrap gap-4 mb-6">
               <div className="relative flex-1 min-w-[200px]">
@@ -201,6 +240,16 @@ const ApplicationList: React.FC = () => {
                   </button>
                 )}
               </div>
+              <select
+                className="border rounded-lg px-4 py-2 text-sm bg-white min-w-[140px]"
+                value={dormFilter}
+                onChange={(e) => setDormFilter(e.target.value)}
+              >
+                <option value="all">Tất cả KTX</option>
+                {dormOptions.map((dorm) => (
+                  <option key={dorm} value={dorm}>{dorm}</option>
+                ))}
+              </select>
               <select
                 className="border rounded-lg px-4 py-2 text-sm bg-white min-w-[150px]"
                 value={statusFilter}

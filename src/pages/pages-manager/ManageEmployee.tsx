@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { NotificationDialog } from "@/components/ui/notification-dialog";
@@ -10,6 +10,10 @@ import {
 	updateManager,
 	deleteManager,
 } from "@/features/auth/managerApi";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Loader2, Plus, Search, UserCog } from "lucide-react";
 
 const ErrorMessage: React.FC<{ message?: string }> = ({ message }) => {
 	if (!message) return null;
@@ -76,8 +80,22 @@ const initialForm = {
 	username: "",
 };
 
+interface Manager {
+	staff_id: string;
+	fullname: string;
+	phone: string;
+	cccd: string;
+	dob?: string;
+	province: string;
+	commune: string;
+	detail_address: string;
+	email: string;
+	username: string;
+	avatar?: string;
+}
+
 const ManageEmployee: React.FC = () => {
-	const [managers, setManagers] = useState<{ [key: string]: unknown }[]>([]);
+	const [managers, setManagers] = useState<Manager[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [modalOpen, setModalOpen] = useState(false);
@@ -89,13 +107,14 @@ const ManageEmployee: React.FC = () => {
 	const [submitting, setSubmitting] = useState(false);
 	const [errors, setErrors] = useState<{ [key: string]: string }>({});
 	const [dialog, setDialog] = useState<{ open: boolean; type: 'error' | 'success'; title: string; description: string }>({ open: false, type: 'error', title: '', description: '' });
+	const [searchTerm, setSearchTerm] = useState("");
 	const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
 
 	const fetchManagers = async () => {
 		setLoading(true);
 		try {
 			const res = await getManagers();
-			setManagers(res || []);
+			setManagers((res as Manager[]) || []);
 		} catch (e: unknown) {
 			if (e instanceof Error) {
 				setError(e.message);
@@ -111,6 +130,17 @@ const ManageEmployee: React.FC = () => {
 		fetchManagers();
 	}, []);
 
+	const filteredManagers = useMemo(() => {
+		if (!searchTerm.trim()) return managers;
+		const term = searchTerm.toLowerCase();
+		return managers.filter((m) =>
+			m.fullname.toLowerCase().includes(term) ||
+			m.email.toLowerCase().includes(term) ||
+			m.phone.toLowerCase().includes(term) ||
+			m.username.toLowerCase().includes(term)
+		);
+	}, [managers, searchTerm]);
+
 
 
 	const openAdd = () => {
@@ -120,18 +150,18 @@ const ManageEmployee: React.FC = () => {
 		setErrors({});
 		setModalOpen(true);
 	};
-	const openEdit = (m: { [key: string]: unknown }) => {
-		setEditId(m.staff_id as string);
+	const openEdit = (m: Manager) => {
+		setEditId(m.staff_id);
 		setForm({
-			fullname: m.fullname as string,
-			phone: m.phone as string,
-			cccd: m.cccd as string,
-			dob: m.dob ? (m.dob as string).slice(0, 10) : "",
-			province: m.province as string,
-			commune: m.commune as string,
-			detail_address: m.detail_address as string,
-			email: m.email as string,
-			username: m.username as string,
+			fullname: m.fullname,
+			phone: m.phone,
+			cccd: m.cccd,
+			dob: m.dob ? m.dob.slice(0, 10) : "",
+			province: m.province,
+			commune: m.commune,
+			detail_address: m.detail_address,
+			email: m.email,
+			username: m.username,
 		});
 		setAvatarFile(null);
 		setErrors({});
@@ -206,58 +236,126 @@ const ManageEmployee: React.FC = () => {
 	};
 
 	return (
-		<div className="min-h-screen flex flex-col bg-white">
+		<div className="min-h-screen flex flex-col bg-gray-50">
 			<Header user={user} />
 			<div className="flex flex-1">
 				<Sidebar roles={user?.roles} />
 				<main className="flex-1 p-4 md:p-8 lg:p-10 ml-0 md:ml-72 transition-all duration-300">
-					<div className="max-w-6xl mx-auto">
-						<div className="flex justify-between items-center mb-8">
-							<h2 className="text-3xl font-bold tracking-wide text-red-700">Danh sách cán bộ quản túc</h2>
-							<button
-								className="px-5 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition"
-								onClick={openAdd}
-							>
-								Thêm nhân viên
-							</button>
-						</div>
+					<div className="max-w-6xl mx-auto space-y-6">
+						<Card className="border-red-100 bg-white shadow-sm rounded-2xl">
+							<CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+								<div className="flex items-center gap-3">
+									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-700">
+										<UserCog className="h-5 w-5" />
+									</div>
+									<div>
+										<CardTitle className="text-xl sm:text-2xl font-semibold text-red-800">
+											Quản lý nhân sự KTX
+										</CardTitle>
+										<p className="text-xs sm:text-sm text-gray-500 mt-1">
+											Danh sách và thông tin cán bộ quản lý KTX PTIT.
+										</p>
+									</div>
+								</div>
+							</CardHeader>
+							<CardContent className="pt-0 pb-4 sm:pb-6">
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+									<p className="text-xs sm:text-sm text-gray-500">
+										Tổng số nhân sự: <span className="font-semibold text-red-700">{managers.length}</span>
+									</p>
+									<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
+										<div className="relative w-full sm:w-64">
+											<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+											<Input
+												value={searchTerm}
+												onChange={(e) => setSearchTerm(e.target.value)}
+												placeholder="Tìm theo tên, email, SĐT..."
+												className="pl-9 text-sm"
+											/>
+										</div>
+										<Button
+											type="button"
+											className="bg-red-700 hover:bg-red-800 text-white shadow-sm h-9 px-4 text-sm font-semibold flex items-center gap-2 justify-center"
+											onClick={openAdd}
+										>
+											<Plus className="h-4 w-4" />
+											Thêm nhân viên
+										</Button>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+
 						{loading ? (
-							<div className="text-gray-500 text-lg text-center py-10">Đang tải dữ liệu...</div>
+							<div className="flex items-center justify-center py-16 text-gray-500">
+								<Loader2 className="h-6 w-6 animate-spin text-red-600 mr-2" />
+								Đang tải dữ liệu nhân sự...
+							</div>
 						) : error ? (
-							<div className="text-red-500 text-lg text-center py-10">{error}</div>
+							<Card className="border-red-200 bg-red-50/80 rounded-2xl">
+								<CardContent className="py-4 text-sm text-red-700 text-center">
+									{error}
+								</CardContent>
+							</Card>
 						) : managers.length === 0 ? (
-							<div className="text-gray-400 text-center py-10">Chưa có nhân viên nào.</div>
+							<Card className="border-dashed border-gray-200 bg-white/60 rounded-2xl">
+								<CardContent className="py-10 text-center text-sm text-gray-500">
+									Chưa có nhân viên nào. Hãy thêm nhân viên đầu tiên.
+								</CardContent>
+							</Card>
+						) : filteredManagers.length === 0 ? (
+							<Card className="border-gray-200 bg-white rounded-2xl">
+								<CardContent className="py-10 text-center text-sm text-gray-500">
+									Không tìm thấy nhân viên phù hợp với từ khóa tìm kiếm.
+								</CardContent>
+							</Card>
 						) : (
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-								{managers.map((m) => (
-									<div key={String(m.staff_id)} className="bg-white rounded-2xl shadow border border-gray-100 p-6 flex flex-col gap-3 hover:shadow-lg transition">
+								{filteredManagers.map((m) => (
+									<div
+										key={m.staff_id}
+										className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-3 hover:shadow-md hover:border-red-100 transition"
+									>
 										<div className="flex items-center gap-4">
 											<img
-												src={String(m.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(String(m.fullname))}`}
-												alt={String(m.fullname)}
-												className="w-20 h-20 rounded-full object-cover border"
+												src={m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.fullname)}`}
+												alt={m.fullname}
+												className="w-16 h-16 rounded-full object-cover border"
 											/>
 											<div className="flex-1 min-w-0">
-												<div className="font-semibold text-xl text-red-700 truncate">{String(m.fullname)}</div>
-												<div className="text-gray-700 text-sm truncate">{String(m.email)} <span className="ml-2 text-xs text-gray-400">({String(m.username)})</span></div>
-												<div className="text-gray-500 text-xs">SĐT: {String(m.phone)} | CCCD: {String(m.cccd)}</div>
+												<div className="font-semibold text-lg text-red-700 truncate">{m.fullname}</div>
+												<div className="text-gray-700 text-sm truncate">
+													{m.email}
+													<span className="ml-2 text-xs text-gray-400">({m.username})</span>
+												</div>
+												<div className="text-gray-500 text-xs">SĐT: {m.phone} · CCCD: {m.cccd}</div>
 											</div>
 										</div>
-										<div className="text-gray-500 text-xs mt-1">Địa chỉ: {String(m.detail_address)}, {String(m.commune)}, {String(m.province)}</div>
-										<div className="text-gray-500 text-xs">Ngày sinh: {m.dob ? new Date(m.dob as string).toLocaleDateString() : ''}</div>
+										<div className="text-gray-500 text-xs mt-1">
+											Địa chỉ: {m.detail_address}, {m.commune}, {m.province}
+										</div>
+										<div className="text-gray-500 text-xs">
+											Ngày sinh: {m.dob ? new Date(m.dob).toLocaleDateString("vi-VN") : ""}
+										</div>
 										<div className="flex gap-3 mt-2">
-											<button
-												className="px-4 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
-												onClick={() => openEdit(m)}
-											>
-												Sửa
-											</button>
-											<button
-												className="px-4 py-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-300"
-												onClick={() => { setDeleteId(String(m.staff_id)); setConfirmDelete(true); }}
-											>
-												Xóa
-											</button>
+											<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													onClick={() => openEdit(m)}
+													className="h-8 px-3 text-xs border-gray-300 text-gray-700 hover:bg-red-50 hover:text-red-700"
+												>
+													Sửa
+												</Button>
+											<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													onClick={() => { setDeleteId(m.staff_id); setConfirmDelete(true); }}
+													className="h-8 px-3 text-xs border-gray-200 bg-gray-50 text-gray-700 hover:bg-red-50 hover:border-red-200"
+												>
+													Xóa
+												</Button>
 										</div>
 									</div>
 								))}

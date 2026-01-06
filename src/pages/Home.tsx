@@ -10,6 +10,7 @@ import AdminSystemDashboard from "@/components/dashboard/AdminSystemDashboard";
 import StudentDashboard from "@/components/dashboard/StudentDashboard";
 import GuestDashboard from "@/components/dashboard/GuestDashboard";
 import ManagerDashboard from "@/components/dashboard/ManagerDashboard";
+import StaffDashboard from "@/components/dashboard/StaffDashboard";
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -24,11 +25,12 @@ const Home: React.FC = () => {
     navigate("/", { replace: true });
   };
 
-  // Phân quyền: admin_system, student, guest
+  // Phân quyền: admin_system, manager, non-manager (nhân sự quản túc), student, guest
   const isAdmin = user?.roles?.includes("admin_system");
   const isStudent = user?.roles?.includes("student");
   const isGuest = user?.roles?.includes("guest");
   const isManager = user?.roles?.includes("manager");
+  const isStaff = user?.roles?.includes("non-manager");
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -54,6 +56,8 @@ const Home: React.FC = () => {
               <AdminSystemDashboard user={user} />
             ) : isManager ? (
               <ManagerDashboard user={user} />
+            ) : isStaff ? (
+              <StaffDashboard user={user} />
             ) : isStudent ? (
               <StudentDashboard user={user} />
             ) : isGuest ? (

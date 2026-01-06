@@ -19,6 +19,8 @@ const RoomTransferRequests: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revealedId, setRevealedId] = useState<string | null>(null);
+  const [dormFilter, setDormFilter] = useState<string>("all");
+  const [roomFilter, setRoomFilter] = useState<string>("all");
 
   const loadData = async () => {
     setLoading(true);
@@ -38,6 +40,52 @@ const RoomTransferRequests: React.FC = () => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const dormOptions = useMemo(() => {
+    const set = new Set<string>();
+    requests.forEach((r) => {
+      if (r.target_room_id) {
+        const building = r.target_room_id.split("-")[0];
+        if (building) set.add(building);
+      }
+    });
+    return Array.from(set).sort();
+  }, [requests]);
+
+  const roomOptions = useMemo(() => {
+    const set = new Set<string>();
+    requests.forEach((r) => {
+      if (r.target_room_id) {
+        const room = r.target_room_id;
+        const building = room.split("-")[0];
+        if (dormFilter === "all" || building === dormFilter) {
+          set.add(room);
+        }
+      }
+    });
+    return Array.from(set).sort();
+  }, [requests, dormFilter]);
+
+  const transferStats = useMemo(
+    () => ({
+      total: requests.length,
+      pending: requests.filter((r) => r.manager_confirm_status === "pending").length,
+      accepted: requests.filter((r) => r.manager_confirm_status === "accepted").length,
+      rejected: requests.filter((r) => r.manager_confirm_status === "rejected").length,
+    }),
+    [requests],
+  );
+
+  const filteredRequests = useMemo(
+    () =>
+      requests.filter((r) => {
+        const building = r.target_room_id ? r.target_room_id.split("-")[0] : "";
+        const matchesDorm = dormFilter === "all" || building === dormFilter;
+        const matchesRoom = roomFilter === "all" || r.target_room_id === roomFilter;
+        return matchesDorm && matchesRoom;
+      }),
+    [requests, dormFilter, roomFilter],
+  );
 
   const handleManagerConfirm = async (
     id: string,
@@ -96,16 +144,58 @@ const RoomTransferRequests: React.FC = () => {
         <Sidebar roles={user?.roles} />
         <main className="flex-1 p-4 md:p-8 lg:p-10 ml-0 md:ml-72 transition-all duration-300">
           <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow p-6">
-            <h2 className="text-2xl font-bold text-red-700 mb-4 text-center">
+            <h2 className="text-2xl font-bold text-red-700 mb-2 text-center">
               Yêu cầu chuyển phòng giữa sinh viên
             </h2>
             <p className="text-sm text-gray-600 mb-4 text-center">
               Quản lý duyệt các yêu cầu chuyển phòng đã được sinh viên B chấp nhận.
             </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 text-sm">
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex flex-col items-center">
+                <span className="text-xs text-gray-500">Tổng số yêu cầu</span>
+                <span className="mt-1 text-lg font-semibold text-red-700">{transferStats.total}</span>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex flex-col items-center">
+                <span className="text-xs text-gray-500">Đang chờ duyệt</span>
+                <span className="mt-1 text-lg font-semibold text-amber-600">{transferStats.pending}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col items-center">
+                <span className="text-xs text-gray-500">Đã chấp nhận</span>
+                <span className="mt-1 text-lg font-semibold text-emerald-600">{transferStats.accepted}</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col items-center">
+                <span className="text-xs text-gray-500">Đã từ chối</span>
+                <span className="mt-1 text-lg font-semibold text-gray-700">{transferStats.rejected}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4 mb-4 text-sm justify-center sm:justify-start">
+              <select
+                className="border rounded-lg px-4 py-2 bg-white min-w-[140px]"
+                value={dormFilter}
+                onChange={(e) => setDormFilter(e.target.value)}
+              >
+                <option value="all">Tất cả KTX</option>
+                {dormOptions.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <select
+                className="border rounded-lg px-4 py-2 bg-white min-w-[160px]"
+                value={roomFilter}
+                onChange={(e) => setRoomFilter(e.target.value)}
+              >
+                <option value="all">Tất cả phòng</option>
+                {roomOptions.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
             {error && <div className="text-red-600 mb-3">{error}</div>}
             {loading ? (
               <div className="text-gray-600 text-center">Đang tải danh sách...</div>
-            ) : requests.length === 0 ? (
+            ) : filteredRequests.length === 0 ? (
               <div className="text-gray-500 text-center">
                 Chưa có yêu cầu chuyển phòng nào.
               </div>
@@ -124,7 +214,7 @@ const RoomTransferRequests: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {requests.map((r) => {
+                    {filteredRequests.map((r) => {
                       const canManagerConfirm =
                         r.peer_confirm_status === "accepted" &&
                         r.manager_confirm_status === "pending";

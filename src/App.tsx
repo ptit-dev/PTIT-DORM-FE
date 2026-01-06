@@ -29,6 +29,7 @@ import FacilityComplaints from "./pages/pages-manager/FacilityComplaints";
 import LogMonitorPage from "./pages/LogMonitor";
 import AdminAccounts from "./pages/AdminAccounts";
 import BackupData from "./pages/BackupData";
+import ChatbotDatasetPage from "./pages/ChatbotDatasetPage";
 import RoomTransferRequests from "./pages/pages-manager/RoomTransferRequests";
 import { refreshAccessToken } from "@/features/auth/api";
 import RequireAuth from "@/features/auth/RequireAuth";
@@ -149,6 +150,15 @@ const App = () => (
             )}
           />
 
+          <Route
+            path="/chatbot-dataset"
+            element={(
+              <RequireAuth allowedRoles={["admin_system", "manager"]}>
+                <ChatbotDatasetPage />
+              </RequireAuth>
+            )}
+          />
+
           {/* Manager & nhân viên */}
           <Route
             path="/application-list"
@@ -185,7 +195,7 @@ const App = () => (
           <Route
             path="/manage-rooms"
             element={(
-              <RequireAuth allowedRoles={["admin_system", "manager"]}>
+              <RequireAuth allowedRoles={["admin_system", "manager", "non-manager"]}>
                 <ManageRooms />
               </RequireAuth>
             )}

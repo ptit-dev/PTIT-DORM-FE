@@ -1,5 +1,24 @@
 import { NavLink } from "react-router-dom";
-import { Home, Newspaper, User, FileText, Calendar, GraduationCap, Briefcase, Layers, MessageSquare, ShieldCheck, Settings, Users, BookOpen, Library, DollarSign, ChevronDown, ChevronUp, LogOut } from "lucide-react";
+import {
+  Home,
+  Newspaper,
+  User,
+  FileText,
+  Calendar,
+  GraduationCap,
+  Briefcase,
+  Layers,
+  MessageSquare,
+  ShieldCheck,
+  Settings,
+  Users,
+  BookOpen,
+  Library,
+  DollarSign,
+  ChevronDown,
+  ChevronUp,
+  LogOut,
+} from "lucide-react";
 import { useState } from "react";
 
 interface SidebarProps {
@@ -37,20 +56,21 @@ const MENU_CONFIG = {
       icon: Settings,
       submenu: [
         { to: "/profile", icon: User, label: "Thông tin cá nhân" },
-        { to: "/change-password", icon: LogOut, label: "Đổi mật khẩu" },
+        { to: "/profile", icon: LogOut, label: "Đổi mật khẩu" },
       ],
     },
-    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
+    // { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
   ],
   non_manager: [
     { to: "/home", icon: Home, label: "Trang chủ" },
     { to: "/news", icon: Newspaper, label: "Tin tức" },
     { to: "/profile", icon: User, label: "Thông tin cá nhân" },
     { to: "/dorm-areas", icon: FileText, label: "Khu vực KTX" },
+    { to: "/manage-rooms", icon: FileText, label: "Phòng ở và sinh viên" },
     {to: "/duty-schedule", icon: Calendar, label: "Lịch trực" },
     { to: "/facility-complaints", icon: Layers, label: "Khiếu nại CSVC" },
     { to: "/electric-bill-list", icon: DollarSign, label: "Hóa đơn tiền điện" },
-    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
+    // { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
   ],
   manager: [
     { to: "/home", icon: Home, label: "Trang chủ" },
@@ -66,7 +86,8 @@ const MENU_CONFIG = {
     { to: "/electric-bill-list", icon: DollarSign, label: "Hóa đơn tiền điện" },
     { to: "/manage-employee", icon: Users, label: "Quản lý nhân viên" },
     { to: "/duty-schedule", icon: Calendar, label: "Lịch trực" },
-    { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
+    { to: "/chatbot-dataset", icon: MessageSquare, label: "Quản lý Chatbot" },
+    // { to: "/support", icon: MessageSquare, label: "Yêu cầu hỗ trợ" },
   ],
   admin_system: [
     { to: "/home", icon: ShieldCheck, label: "Dashboard" },
@@ -76,20 +97,20 @@ const MENU_CONFIG = {
       icon: Users,
       to: "/admin-accounts",
     },
-    { to: "/admin-accounts", icon: User, label: "Phân quyền Hệ thống" },
+    // { to: "/admin-accounts", icon: User, label: "Phân quyền Hệ thống" },
     { to: "/system-logs", icon: Layers, label: "Nhật ký hệ thống" },
     {
       label: "Sao lưu hệ thống",
       icon: Settings,
       to: "/backup-data",
     },
-    { to: "/dorm-info", icon: FileText, label: "Thông tin KTX" },
+    { to: "/chatbot-dataset", icon: MessageSquare, label: "Quản lý Chatbot" },
+    { to: "/dorm-areas", icon: FileText, label: "Thông tin KTX" },
+    { to: "/manage-rooms", icon: FileText, label: "Phòng ở và sinh viên" },
   ],
 };
 
-
-
-function getMenuByRoles(roles) {
+function getMenuByRoles(roles: string[] | undefined) {
   // Ưu tiên admin > manager > student > guest
   if (roles?.includes("admin_system")) return { menu: MENU_CONFIG.admin_system, title: "Menu Admin" };
   if (roles?.includes("manager")) return { menu: MENU_CONFIG.manager, title: "Menu Quản lý" };

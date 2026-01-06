@@ -1,6 +1,6 @@
 import { resolveElectricBillComplaint } from "@/features/auth/electricBillComplaintApi";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import {
@@ -121,6 +121,8 @@ const ElectricBillList: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+  const [dormFilter, setDormFilter] = useState<string>("all");
+  const [roomFilter, setRoomFilter] = useState<string>("all");
   // Lấy danh sách phòng theo area_id
   const rooms = form.area_id ? (DORMS.find(d => d.area_id === form.area_id)?.rooms || []) : [];
 
@@ -164,6 +166,52 @@ const ElectricBillList: React.FC = () => {
     fetchComplaints();
     // eslint-disable-next-line
   }, []);
+
+  const dormOptions = useMemo(() => {
+    const set = new Set<string>();
+    bills.forEach((b) => {
+      if (b.room_id) {
+        const building = b.room_id.split("-")[0];
+        if (building) set.add(building);
+      }
+    });
+    return Array.from(set).sort();
+  }, [bills]);
+
+  const roomOptions = useMemo(() => {
+    const set = new Set<string>();
+    bills.forEach((b) => {
+      if (b.room_id) {
+        const room = b.room_id;
+        const building = room.split("-")[0];
+        if (dormFilter === "all" || building === dormFilter) {
+          set.add(room);
+        }
+      }
+    });
+    return Array.from(set).sort();
+  }, [bills, dormFilter]);
+
+  const billStats = useMemo(
+    () => ({
+      total: bills.length,
+      paid: bills.filter((b) => b.payment_status === "paid").length,
+      unpaid: bills.filter((b) => b.payment_status === "unpaid").length,
+      confirmed: bills.filter((b) => b.is_confirmed).length,
+    }),
+    [bills],
+  );
+
+  const filteredBills = useMemo(
+    () =>
+      bills.filter((b) => {
+        const building = b.room_id ? b.room_id.split("-")[0] : "";
+        const matchesDorm = dormFilter === "all" || building === dormFilter;
+        const matchesRoom = roomFilter === "all" || b.room_id === roomFilter;
+        return matchesDorm && matchesRoom;
+      }),
+    [bills, dormFilter, roomFilter],
+  );
 
   const openAdd = () => {
     setModal({ open: true, mode: 'add' });
@@ -236,20 +284,67 @@ const ElectricBillList: React.FC = () => {
         <Sidebar roles={user?.roles} />
         <main className="flex-1 p-4 md:p-8 lg:p-10 ml-0 md:ml-72 transition-all duration-300">
           <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow p-6">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-red-700">Danh sách hóa đơn tiền điện</h2>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-red-700">Danh sách hóa đơn tiền điện</h2>
+                <p className="text-xs md:text-sm text-gray-500 mt-1">
+                  Quản lý, theo dõi và xử lý hóa đơn tiền điện theo từng phòng KTX.
+                </p>
+              </div>
               <button
-                className="px-5 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition"
+                className="px-5 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition text-sm"
                 onClick={openAdd}
               >
                 Thêm hóa đơn
               </button>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 text-sm">
+              <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Tổng số hóa đơn</span>
+                <span className="mt-1 text-xl font-semibold text-red-700">{billStats.total}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Đã thanh toán</span>
+                <span className="mt-1 text-xl font-semibold text-emerald-600">{billStats.paid}</span>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Chưa thanh toán</span>
+                <span className="mt-1 text-xl font-semibold text-amber-600">{billStats.unpaid}</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col">
+                <span className="text-xs text-gray-500">Đã sinh viên xác nhận</span>
+                <span className="mt-1 text-xl font-semibold text-gray-700">{billStats.confirmed}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4 mb-6 text-sm">
+              <select
+                className="border rounded-lg px-4 py-2 bg-white min-w-[140px]"
+                value={dormFilter}
+                onChange={(e) => setDormFilter(e.target.value)}
+              >
+                <option value="all">Tất cả KTX</option>
+                {dormOptions.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <select
+                className="border rounded-lg px-4 py-2 bg-white min-w-[160px]"
+                value={roomFilter}
+                onChange={(e) => setRoomFilter(e.target.value)}
+              >
+                <option value="all">Tất cả phòng</option>
+                {roomOptions.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
             {loading ? (
               <div className="text-gray-500 text-lg text-center py-10">Đang tải dữ liệu...</div>
             ) : error ? (
               <div className="text-red-500 text-lg text-center py-10">{error}</div>
-            ) : bills.length === 0 ? (
+            ) : filteredBills.length === 0 ? (
               <div className="text-gray-400 text-center py-10">Chưa có hóa đơn nào.</div>
             ) : (
               <div className="overflow-x-auto rounded-2xl shadow bg-white">
@@ -267,7 +362,7 @@ const ElectricBillList: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {bills.map((b) => {
+                    {filteredBills.map((b) => {
                       const billComplaints = complaints.filter((c) => c.electric_bill_id === b.id);
                       return (
                         <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 transition">
