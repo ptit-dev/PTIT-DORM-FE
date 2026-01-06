@@ -72,7 +72,7 @@ const ChatbotButton = () => {
     }
   };
 
-  const normalWidth = 'w-80';
+  const normalWidth = 'w-96';
   const normalHeight = 'h-96';
 
   const maximizedWidth = 'w-[95vw] md:w-[600px]';
@@ -85,22 +85,41 @@ const ChatbotButton = () => {
   return (
     <div className="fixed bottom-6 right-6 z-[100]" ref={chatRef}>
       {/* Nút bật tắt */}
-      <Button
+      <button
         onClick={() => {
           setIsOpen(!isOpen);
           if (!isOpen && !isConnected) connect();
         }}
-        className="rounded-full h-14 w-14 bg-red-700 hover:bg-red-800 shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className={`rounded-full h-14 w-14 shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center ${
+          !isOpen ? 'chatbot-pulse' : ''
+        }`}
         title={isOpen ? 'Đóng Chatbot' : 'Mở Chatbot'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer'
+        }}
       >
-        {isOpen ? <X className="h-6 w-6" /> : <MessageSquareText className="h-6 w-6" />}
-      </Button>
+        <img 
+          alt="chatbot" 
+          src="https://slink.ptit.edu.vn/images/chatbot.png"
+          className="h-14 w-14 object-cover rounded-full"
+        />
+      </button>
 
       {isOpen && (
         <div className={modalClasses}>
           {/* Header */}
           <div className="p-3 bg-red-700 text-white rounded-t-lg flex justify-between items-center flex-shrink-0">
-            <h3 className="font-bold text-lg">Chatbot Ký túc xá PTIT</h3>
+            <div className="flex items-center gap-2">
+              <img 
+                src="https://slink.ptit.edu.vn/images/chatbot.png"
+                alt="Chatbot Icon"
+                className="h-6 w-6 rounded-full animate-bounce"
+              />
+              <h3 className="font-bold text-lg">PTIT Dorm Chatbot</h3>
+            </div>
             <div className="flex items-center gap-2">
               <StatusDot isConnected={isConnected} />
 
@@ -134,17 +153,31 @@ const ChatbotButton = () => {
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
+                {msg.type === 'bot' && (
+                  <img
+                    src="https://slink.ptit.edu.vn/images/chatbot_ava.png"
+                    alt="Bot Avatar"
+                    className="w-6 h-6 rounded-full flex-shrink-0 mt-1"
+                  />
+                )}
                 <div
-                  className={`max-w-[85%] px-3 py-2 rounded-xl whitespace-pre-wrap ${
+                  className={`max-w-[70%] px-3 py-2 rounded-xl whitespace-pre-wrap ${
                     msg.type === 'user'
-                      ? 'bg-red-700 text-white rounded-br-none'
-                      : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200 w-full text-justify'
+                      ? 'bg-gray-100 text-gray-800 rounded-br-none border border-gray-200 text-justify'
+                      : 'bg-red-700 text-white rounded-tl-none'
                   }`}
                 >
                   {msg.type === 'bot' ? <FormattedMessage text={msg.text} /> : msg.text}
                 </div>
+                {msg.type === 'user' && (
+                  <img
+                    src="https://res.cloudinary.com/drly2lfdz/image/upload/v1766835711/iconptit_gtkanp.png"
+                    alt="User Avatar"
+                    className="w-6 h-6 rounded-full flex-shrink-0 mt-1"
+                  />
+                )}
               </div>
             ))}
             <div ref={messagesEndRef} />
