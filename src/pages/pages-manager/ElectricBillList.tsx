@@ -1,5 +1,3 @@
-import { resolveElectricBillComplaint } from "@/features/auth/electricBillComplaintApi";
-
 import React, { useEffect, useMemo, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
@@ -10,48 +8,24 @@ import {
   deleteElectricBill,
   getElectricBillComplaints,
 } from "@/features/auth/electricBillApi";
+import { resolveElectricBillComplaint } from "@/features/auth/electricBillComplaintApi";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 const paymentMap: Record<string, string> = {
   unpaid: "Chưa thanh toán",
   paid: "Đã thanh toán",
 };
 
-
-// Danh sách KTX và phòng
 const DORMS = [
-  { area_id: "B1", rooms: [
-    "B1-101", "B1-102", "B1-103", "B1-104", "B1-105", "B1-106", "B1-107", "B1-108", "B1-109", "B1-110",
-    "B1-201", "B1-202", "B1-203", "B1-204", "B1-205", "B1-206", "B1-207", "B1-208", "B1-209", "B1-210",
-    "B1-301", "B1-302", "B1-303", "B1-304", "B1-305", "B1-306", "B1-307", "B1-308", "B1-309", "B1-310",
-    "B1-401", "B1-402", "B1-403", "B1-404", "B1-405", "B1-406", "B1-407", "B1-408", "B1-409", "B1-410",
-    "B1-501", "B1-502", "B1-503", "B1-504", "B1-505", "B1-506", "B1-507", "B1-508", "B1-509", "B1-510"
-  ]},
-  { area_id: "B2", rooms: [
-    "B2-101", "B2-102", "B2-103", "B2-104", "B2-105", "B2-106", "B2-107", "B2-108", "B2-109", "B2-110",
-    "B2-201", "B2-202", "B2-203", "B2-204", "B2-205", "B2-206", "B2-207", "B2-208", "B2-209", "B2-210",
-    "B2-301", "B2-302", "B2-303", "B2-304", "B2-305", "B2-306", "B2-307", "B2-308", "B2-309", "B2-310",
-    "B2-401", "B2-402", "B2-403", "B2-404", "B2-405", "B2-406", "B2-407", "B2-408", "B2-409", "B2-410",
-    "B2-501", "B2-502", "B2-503", "B2-504", "B2-505", "B2-506", "B2-507", "B2-508", "B2-509", "B2-510"
-  ]},
-  { area_id: "B5", rooms: [
-    "B5-101", "B5-102", "B5-103", "B5-104", "B5-105", "B5-106", "B5-107", "B5-108", "B5-109", "B5-110",
-    "B5-201", "B5-202", "B5-203", "B5-204", "B5-205", "B5-206", "B5-207", "B5-208", "B5-209", "B5-210",
-    "B5-301", "B5-302", "B5-303", "B5-304", "B5-305", "B5-306", "B5-307", "B5-308", "B5-309", "B5-310",
-    "B5-401", "B5-402", "B5-403", "B5-404", "B5-405", "B5-406", "B5-407", "B5-408", "B5-409", "B5-410",
-    "B5-501", "B5-502", "B5-503", "B5-504", "B5-505", "B5-506", "B5-507", "B5-508", "B5-509", "B5-510"
-  ]},
-  { area_id: "B0", rooms: [
-    "B0-101", "B0-102", "B0-103", "B0-104", "B0-105", "B0-106", "B0-107", "B0-108", "B0-109", "B0-110",
-    "B0-201", "B0-202", "B0-203", "B0-204", "B0-205", "B0-206", "B0-207", "B0-208", "B0-209", "B0-210",
-    "B0-301", "B0-302", "B0-303", "B0-304", "B0-305", "B0-306", "B0-307", "B0-308", "B0-309", "B0-310",
-    "B0-401", "B0-402", "B0-403", "B0-404", "B0-405", "B0-406", "B0-407", "B0-408", "B0-409", "B0-410",
-    "B0-501", "B0-502", "B0-503", "B0-504", "B0-505", "B0-506", "B0-507", "B0-508", "B0-509", "B0-510"
-  ]},
+  { area_id: "B1", rooms: ["B1-101", "B1-102", "B1-103", "B1-104", "B1-105", "B1-106", "B1-107", "B1-108", "B1-109", "B1-110", "B1-201", "B1-202", "B1-203", "B1-204", "B1-205", "B1-206", "B1-207", "B1-208", "B1-209", "B1-210", "B1-301", "B1-302", "B1-303", "B1-304", "B1-305", "B1-306", "B1-307", "B1-308", "B1-309", "B1-310", "B1-401", "B1-402", "B1-403", "B1-404", "B1-405", "B1-406", "B1-407", "B1-408", "B1-409", "B1-410", "B1-501", "B1-502", "B1-503", "B1-504", "B1-505", "B1-506", "B1-507", "B1-508", "B1-509", "B1-510"] },
+  { area_id: "B2", rooms: ["B2-101", "B2-102", "B2-103", "B2-104", "B2-105", "B2-106", "B2-107", "B2-108", "B2-109", "B2-110", "B2-201", "B2-202", "B2-203", "B2-204", "B2-205", "B2-206", "B2-207", "B2-208", "B2-209", "B2-210", "B2-301", "B2-302", "B2-303", "B2-304", "B2-305", "B2-306", "B2-307", "B2-308", "B2-309", "B2-310", "B2-401", "B2-402", "B2-403", "B2-404", "B2-405", "B2-406", "B2-407", "B2-408", "B2-409", "B2-410", "B2-501", "B2-502", "B2-503", "B2-504", "B2-505", "B2-506", "B2-507", "B2-508", "B2-509", "B2-510"] },
+  { area_id: "B5", rooms: ["B5-101", "B5-102", "B5-103", "B5-104", "B5-105", "B5-106", "B5-107", "B5-108", "B5-109", "B5-110", "B5-201", "B5-202", "B5-203", "B5-204", "B5-205", "B5-206", "B5-207", "B5-208", "B5-209", "B5-210", "B5-301", "B5-302", "B5-303", "B5-304", "B5-305", "B5-306", "B5-307", "B5-308", "B5-309", "B5-310", "B5-401", "B5-402", "B5-403", "B5-404", "B5-405", "B5-406", "B5-407", "B5-408", "B5-409", "B5-410", "B5-501", "B5-502", "B5-503", "B5-504", "B5-505", "B5-506", "B5-507", "B5-508", "B5-509", "B5-510"] },
+  { area_id: "B0", rooms: ["B0-101", "B0-102", "B0-103", "B0-104", "B0-105", "B0-106", "B0-107", "B0-108", "B0-109", "B0-110", "B0-201", "B0-202", "B0-203", "B0-204", "B0-205", "B0-206", "B0-207", "B0-208", "B0-209", "B0-210", "B0-301", "B0-302", "B0-303", "B0-304", "B0-305", "B0-306", "B0-307", "B0-308", "B0-309", "B0-310", "B0-401", "B0-402", "B0-403", "B0-404", "B0-405", "B0-406", "B0-407", "B0-408", "B0-409", "B0-410", "B0-501", "B0-502", "B0-503", "B0-504", "B0-505", "B0-506", "B0-507", "B0-508", "B0-509", "B0-510"] },
 ];
 
 type ElectricBill = {
   id: string;
-  area_id?: string; // Added area_id to support form and logic
+  area_id?: string;
   room_id: string;
   month: string;
   prev_electric: number | null;
@@ -60,7 +34,6 @@ type ElectricBill = {
   is_confirmed: boolean;
   payment_status: 'unpaid' | 'paid';
   payment_proof?: string;
-  // Add other fields as needed
 };
 
 type ElectricBillComplaint = {
@@ -77,34 +50,10 @@ type ElectricBillComplaint = {
 const ElectricBillList: React.FC = () => {
   const [bills, setBills] = useState<ElectricBill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<{ open: boolean; bill?: ElectricBill; mode: 'add' | 'edit' }>({ open: false, mode: 'add' });
   const [complaints, setComplaints] = useState<ElectricBillComplaint[]>([]);
   const [complaintsLoading, setComplaintsLoading] = useState(false);
-  const [complaintsError, setComplaintsError] = useState<string | null>(null);
-      const [complaintActionLoading, setComplaintActionLoading] = useState<string | null>(null);
-    // Handle accept/reject complaint
-    const handleResolveComplaint = async (complaintId: string, status: 'accepted' | 'rejected') => {
-      setComplaintActionLoading(complaintId + status);
-      try {
-        await resolveElectricBillComplaint({ complaint_id: complaintId, status });
-        await fetchComplaints();
-        // Update modal complaints after action
-        if (complaintModal.bill) {
-          const updated = complaints.filter((c) => c.electric_bill_id === complaintModal.bill.id);
-          setComplaintModal((prev) => ({ ...prev, complaints: updated }));
-        }
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-          alert(e.message);
-        } else {
-          alert("Đã xảy ra lỗi không xác định.");
-        }
-      } finally {
-        setComplaintActionLoading(null);
-      }
-    };
-  // Complaint modal state
+  const [complaintActionLoading, setComplaintActionLoading] = useState<string | null>(null);
   const [complaintModal, setComplaintModal] = useState<{ open: boolean; bill?: ElectricBill; complaints?: ElectricBillComplaint[] }>({ open: false });
   const [form, setForm] = useState<Partial<ElectricBill>>({
     area_id: '',
@@ -120,12 +69,42 @@ const ElectricBillList: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
   const [dormFilter, setDormFilter] = useState<string>("all");
   const [roomFilter, setRoomFilter] = useState<string>("all");
-  // Lấy danh sách phòng theo area_id
+  const [notification, setNotification] = useState<{ open: boolean; title: string; description: string; type: "success" | "error" }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
+  const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+
   const rooms = form.area_id ? (DORMS.find(d => d.area_id === form.area_id)?.rooms || []) : [];
 
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
+
+  const handleResolveComplaint = async (complaintId: string, status: 'accepted' | 'rejected') => {
+    setComplaintActionLoading(complaintId + status);
+    try {
+      await resolveElectricBillComplaint({ complaint_id: complaintId, status });
+      await fetchComplaints();
+      if (complaintModal.bill) {
+        const updated = complaints.filter((c) => c.electric_bill_id === complaintModal.bill.id);
+        setComplaintModal((prev) => ({ ...prev, complaints: updated }));
+      }
+      showNotification("Thành công", "Đã xử lý khiếu nại.", "success");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        showNotification("Lỗi", e.message, "error");
+      } else {
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
+      }
+    } finally {
+      setComplaintActionLoading(null);
+    }
+  };
 
   const fetchBills = async () => {
     setLoading(true);
@@ -134,9 +113,9 @@ const ElectricBillList: React.FC = () => {
       setBills(res || []);
     } catch (e: unknown) {
       if (e instanceof Error) {
-        setError(e.message);
+        showNotification("Lỗi", e.message, "error");
       } else {
-        setError("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setLoading(false);
@@ -148,23 +127,20 @@ const ElectricBillList: React.FC = () => {
     try {
       const res = await getElectricBillComplaints();
       setComplaints(res || []);
-      setComplaintsError(null);
     } catch (e: unknown) {
       if (e instanceof Error) {
-        setComplaintsError(e.message);
+        showNotification("Lỗi", e.message, "error");
       } else {
-        setComplaintsError("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setComplaintsLoading(false);
     }
   };
 
-
   useEffect(() => {
     fetchBills();
     fetchComplaints();
-    // eslint-disable-next-line
   }, []);
 
   const dormOptions = useMemo(() => {
@@ -223,7 +199,7 @@ const ElectricBillList: React.FC = () => {
       curr_electric: null,
       amount: null,
       is_confirmed: false,
-      payment_status: 'unpaid', // để rỗng
+      payment_status: 'unpaid',
       payment_proof: '',
     });
   };
@@ -235,7 +211,6 @@ const ElectricBillList: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // Không gửi area_id khi gọi API, ép kiểu số cho các trường số
       const submitData = { ...form };
       delete submitData.area_id;
       submitData.prev_electric = String(form.prev_electric) === '' || form.prev_electric === null ? null : parseInt(String(form.prev_electric), 10);
@@ -243,16 +218,18 @@ const ElectricBillList: React.FC = () => {
       submitData.amount = String(form.amount) === '' || form.amount === null ? null : parseInt(String(form.amount), 10);
       if (modal.mode === 'add') {
         await createElectricBill(submitData);
+        showNotification("Thành công", "Thêm hóa đơn thành công.", "success");
       } else if (modal.mode === 'edit' && modal.bill) {
         await updateElectricBill(modal.bill.id, submitData);
+        showNotification("Thành công", "Cập nhật hóa đơn thành công.", "success");
       }
       setModal({ open: false, mode: 'add' });
       fetchBills();
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(e.message);
+        showNotification("Lỗi", e.message, "error");
       } else {
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setSubmitting(false);
@@ -266,11 +243,12 @@ const ElectricBillList: React.FC = () => {
       setDeleteId(null);
       setConfirmDelete(false);
       fetchBills();
+      showNotification("Thành công", "Xóa hóa đơn thành công.", "success");
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(e.message);
+        showNotification("Lỗi", e.message, "error");
       } else {
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setSubmitting(false);
@@ -342,8 +320,6 @@ const ElectricBillList: React.FC = () => {
             </div>
             {loading ? (
               <div className="text-gray-500 text-lg text-center py-10">Đang tải dữ liệu...</div>
-            ) : error ? (
-              <div className="text-red-500 text-lg text-center py-10">{error}</div>
             ) : filteredBills.length === 0 ? (
               <div className="text-gray-400 text-center py-10">Chưa có hóa đơn nào.</div>
             ) : (
@@ -391,67 +367,65 @@ const ElectricBillList: React.FC = () => {
                             >
                               Xem khiếu nại ({billComplaints.length})
                             </button>
-                                    {/* Modal xem khiếu nại hóa đơn */}
-                                    {complaintModal.open && (
-                                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                                        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-8 relative">
-                                          <button
-                                            className="absolute top-3 right-3 text-gray-400 hover:text-red-600 text-2xl font-bold"
-                                            onClick={() => setComplaintModal({ open: false })}
-                                            aria-label="Đóng"
-                                          >×</button>
-                                          <h3 className="text-xl font-bold text-yellow-700 mb-4 text-center">Khiếu nại hóa đơn phòng {complaintModal.bill?.room_id} ({complaintModal.bill?.month})</h3>
-                                          {complaintModal.complaints && complaintModal.complaints.length > 0 ? (
-                                            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                                              {complaintModal.complaints.map((c, idx) => (
-                                                <div key={c.id} className="border rounded-lg p-4 bg-gray-50">
-                                                  <div className="flex justify-between items-center mb-2">
-                                                    <span className="font-semibold text-gray-700">#{idx + 1} - {c.student_name || c.student_id}</span>
-                                                    <span className={`text-xs px-2 py-1 rounded ${c.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : c.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                      {c.status === 'pending' ? 'Chờ xử lý' : c.status === 'accepted' ? 'Đã chấp nhận' : 'Đã từ chối'}
-                                                    </span>
-                                                  </div>
-                                                  <div className="mb-2"><span className="font-medium">Nội dung:</span> {c.note}</div>
-                                                  {c.proof && (
-                                                    <div className="mb-2">
-                                                      <span className="font-medium">Ảnh minh chứng:</span><br />
-                                                      <a href={c.proof} target="_blank" rel="noopener noreferrer">
-                                                        <img src={c.proof} alt="Ảnh minh chứng khiếu nại" className="max-h-40 mt-1 rounded border" />
-                                                      </a>
-                                                    </div>
-                                                  )}
-                                                  {c.created_at && <div className="text-xs text-gray-400">Gửi lúc: {new Date(c.created_at).toLocaleString()}</div>}
-                                                  {/* Action buttons for manager */}
-                                                  {c.status === 'pending' && (
-                                                    <div className="flex gap-2 mt-2">
-                                                      <button
-                                                        className="px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-60"
-                                                        disabled={complaintActionLoading === c.id + 'accepted'}
-                                                        onClick={() => handleResolveComplaint(c.id, 'accepted')}
-                                                      >
-                                                        {complaintActionLoading === c.id + 'accepted' ? 'Đang duyệt...' : 'Chấp nhận'}
-                                                      </button>
-                                                      <button
-                                                        className="px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-60"
-                                                        disabled={complaintActionLoading === c.id + 'rejected'}
-                                                        onClick={() => handleResolveComplaint(c.id, 'rejected')}
-                                                      >
-                                                        {complaintActionLoading === c.id + 'rejected' ? 'Đang từ chối...' : 'Từ chối'}
-                                                      </button>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              ))}
-                                            </div>
-                                          ) : (
-                                            <div className="text-gray-500 text-center">Không có khiếu nại nào cho hóa đơn này.</div>
-                                          )}
-                                          <div className="flex justify-end mt-6">
-                                            <button className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setComplaintModal({ open: false })}>Đóng</button>
+                            {complaintModal.open && (
+                              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                                <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-8 relative">
+                                  <button
+                                    className="absolute top-3 right-3 text-gray-400 hover:text-red-600 text-2xl font-bold"
+                                    onClick={() => setComplaintModal({ open: false })}
+                                    aria-label="Đóng"
+                                  >×</button>
+                                  <h3 className="text-xl font-bold text-yellow-700 mb-4 text-center">Khiếu nại hóa đơn phòng {complaintModal.bill?.room_id} ({complaintModal.bill?.month})</h3>
+                                  {complaintModal.complaints && complaintModal.complaints.length > 0 ? (
+                                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                                      {complaintModal.complaints.map((c, idx) => (
+                                        <div key={c.id} className="border rounded-lg p-4 bg-gray-50">
+                                          <div className="flex justify-between items-center mb-2">
+                                            <span className="font-semibold text-gray-700">#{idx + 1} - {c.student_name || c.student_id}</span>
+                                            <span className={`text-xs px-2 py-1 rounded ${c.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : c.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                              {c.status === 'pending' ? 'Chờ xử lý' : c.status === 'accepted' ? 'Đã chấp nhận' : 'Đã từ chối'}
+                                            </span>
                                           </div>
+                                          <div className="mb-2"><span className="font-medium">Nội dung:</span> {c.note}</div>
+                                          {c.proof && (
+                                            <div className="mb-2">
+                                              <span className="font-medium">Ảnh minh chứng:</span><br />
+                                              <a href={c.proof} target="_blank" rel="noopener noreferrer">
+                                                <img src={c.proof} alt="Ảnh minh chứng khiếu nại" className="max-h-40 mt-1 rounded border" />
+                                              </a>
+                                            </div>
+                                          )}
+                                          {c.created_at && <div className="text-xs text-gray-400">Gửi lúc: {new Date(c.created_at).toLocaleString()}</div>}
+                                          {c.status === 'pending' && (
+                                            <div className="flex gap-2 mt-2">
+                                              <button
+                                                className="px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-60"
+                                                disabled={complaintActionLoading === c.id + 'accepted'}
+                                                onClick={() => handleResolveComplaint(c.id, 'accepted')}
+                                              >
+                                                {complaintActionLoading === c.id + 'accepted' ? 'Đang duyệt...' : 'Chấp nhận'}
+                                              </button>
+                                              <button
+                                                className="px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-60"
+                                                disabled={complaintActionLoading === c.id + 'rejected'}
+                                                onClick={() => handleResolveComplaint(c.id, 'rejected')}
+                                              >
+                                                {complaintActionLoading === c.id + 'rejected' ? 'Đang từ chối...' : 'Từ chối'}
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
-                                      </div>
-                                    )}
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-gray-500 text-center">Không có khiếu nại nào cho hóa đơn này.</div>
+                                  )}
+                                  <div className="flex justify-end mt-6">
+                                    <button className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setComplaintModal({ open: false })}>Đóng</button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -461,7 +435,6 @@ const ElectricBillList: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Modal thêm/sửa hóa đơn */}
           {modal.open && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-8 relative">
@@ -474,7 +447,6 @@ const ElectricBillList: React.FC = () => {
                 <h3 className="text-xl font-bold text-red-700 mb-4 text-center">{modal.mode === 'add' ? 'Thêm hóa đơn' : 'Sửa hóa đơn'}</h3>
                 <form className={`space-y-4 ${submitting ? 'opacity-60 pointer-events-none' : ''}`} onSubmit={handleSubmit}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Chọn KTX */}
                     <div className="md:col-span-2">
                       <label className="block font-medium text-gray-700 mb-1">Khu KTX</label>
                       <select
@@ -490,7 +462,6 @@ const ElectricBillList: React.FC = () => {
                         ))}
                       </select>
                     </div>
-                    {/* Chọn phòng theo KTX */}
                     <div className="md:col-span-2">
                       <label className="block font-medium text-gray-700 mb-1">Phòng</label>
                       <select
@@ -510,7 +481,6 @@ const ElectricBillList: React.FC = () => {
                     <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số cũ" required value={form.prev_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, prev_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
                     <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số mới" required value={form.curr_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, curr_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
                     <input className="border rounded px-3 py-2" type="number" placeholder="Số tiền" required value={form.amount ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, amount: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
-                    {/* Chỉ hiện trạng thái thanh toán và minh chứng khi sửa */}
                     {modal.mode === 'edit' && (
                       <>
                         <div className="flex flex-col gap-2 md:col-span-2">
@@ -535,7 +505,6 @@ const ElectricBillList: React.FC = () => {
               </div>
             </div>
           )}
-          {/* Modal xác nhận xóa */}
           {confirmDelete && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
@@ -558,6 +527,13 @@ const ElectricBillList: React.FC = () => {
           )}
         </main>
       </div>
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };

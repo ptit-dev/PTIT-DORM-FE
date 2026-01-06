@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { getMyRoomElectricBills, confirmElectricBill, uploadElectricBillPaymentProof, createElectricBillComplaint } from "@/features/auth/studentElectricBillApi";
+import { set } from "date-fns";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 
 const paymentMap: Record<string, string> = {
@@ -18,7 +20,6 @@ type Bill = {
   payment_status: string;
   payment_proof?: string;
   is_confirmed: boolean;
-  // Add any other fields you expect from the API
 };
 
 const MyRoomElectricBills: React.FC = () => {
@@ -35,26 +36,23 @@ const MyRoomElectricBills: React.FC = () => {
   const [complaintFile, setComplaintFile] = useState<File | null>(null);
   const [complaintLoading, setComplaintLoading] = useState(false);
 
-  // Xác nhận hóa đơn
   const handleConfirm = async (id: string) => {
     setConfirmingId(id);
     try {
       await confirmElectricBill(id);
-      // reload bills
       const res = await getMyRoomElectricBills();
       setBills(res || []);
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(e.message);
+        setError(e.message);
       } else {
-        alert("Đã xảy ra lỗi không xác định.");
+        setError("Đã xảy ra lỗi không xác định.");
       }
     } finally {
       setConfirmingId(null);
     }
   };
 
-  // Thanh toán hóa đơn (upload minh chứng)
   const handlePayment = async (id: string) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -67,14 +65,13 @@ const MyRoomElectricBills: React.FC = () => {
       setUploading(true);
       try {
         await uploadElectricBillPaymentProof(id, file);
-        // reload bills
         const res = await getMyRoomElectricBills();
         setBills(res || []);
       } catch (e: unknown) {
         if (e instanceof Error) {
-          alert(e.message);
+          setError(e.message);
         } else {
-          alert("Đã xảy ra lỗi không xác định.");
+          setError("Đã xảy ra lỗi không xác định.");
         }
       } finally {
         setPayingId(null);
@@ -101,7 +98,6 @@ const MyRoomElectricBills: React.FC = () => {
       }
     };
     fetchBills();
-    // eslint-disable-next-line
   }, []);
 
   return (
@@ -207,12 +203,12 @@ const MyRoomElectricBills: React.FC = () => {
                                             setComplaintNote("");
                                             setComplaintFile(null);
                                             // reload bills nếu cần
-                                            alert('Gửi khiếu nại thành công!');
+                                            setError('Gửi khiếu nại thành công!');
                                           } catch (e: unknown) {
                                             if (e instanceof Error) {
-                                              alert(e.message);
+                                              setError(e.message);
                                             } else {
-                                              alert("Đã xảy ra lỗi không xác định.");
+                                              setError("Đã xảy ra lỗi không xác định.");
                                             }
                                           } finally {
                                             setComplaintLoading(false);
@@ -269,6 +265,13 @@ const MyRoomElectricBills: React.FC = () => {
           </div>
         </main>
       </div>
+      <NotificationDialog
+        open={!!error}
+        onOpenChange={(open) => !open && setError(null)}
+        title="Thông báo"
+        description={error || ""}
+        type="error"
+      />
     </div>
   );
 };
