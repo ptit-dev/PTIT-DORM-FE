@@ -7,6 +7,7 @@ import {
   updateFacilityComplaintStatus,
   deleteFacilityComplaint,
 } from "@/features/auth/facilityComplaintApi";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 const statusOptions: { value: string; label: string }[] = [
   { value: "", label: "Tất cả trạng thái" },
@@ -45,7 +46,6 @@ const FacilityComplaints: React.FC = () => {
 
   const [complaints, setComplaints] = useState<FacilityComplaint[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [searchText, setSearchText] = useState<string>("");
@@ -62,17 +62,32 @@ const FacilityComplaints: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<FacilityComplaint | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    type: "success" | "error";
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
+
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
+
   const loadComplaints = async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await getAllFacilityComplaints();
       setComplaints(data || []);
     } catch (fetchError: unknown) {
       if (fetchError instanceof Error) {
-        setError(fetchError.message);
+        showNotification("Lỗi", fetchError.message, "error");
       } else {
-        setError("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setLoading(false);
@@ -97,7 +112,6 @@ const FacilityComplaints: React.FC = () => {
     if (suffix.length === 0) {
       return "";
     }
-    // Ví dụ: B1-305 => tầng 3
     return suffix.charAt(0);
   };
 
@@ -158,13 +172,12 @@ const FacilityComplaints: React.FC = () => {
       setDetailOpen(false);
       setSelected(null);
       setComplaints((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      showNotification("Thành công", "Cập nhật trạng thái thành công.", "success");
     } catch (updateError: unknown) {
       if (updateError instanceof Error) {
-        // eslint-disable-next-line no-alert
-        alert(updateError.message);
+        showNotification("Lỗi", updateError.message, "error");
       } else {
-        // eslint-disable-next-line no-alert
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setUpdateSubmitting(false);
@@ -184,13 +197,12 @@ const FacilityComplaints: React.FC = () => {
         setDetailOpen(false);
         setSelected(null);
       }
+      showNotification("Thành công", "Xóa khiếu nại thành công.", "success");
     } catch (deleteError: unknown) {
       if (deleteError instanceof Error) {
-        // eslint-disable-next-line no-alert
-        alert(deleteError.message);
+        showNotification("Lỗi", deleteError.message, "error");
       } else {
-        // eslint-disable-next-line no-alert
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setDeleteSubmitting(false);
@@ -293,8 +305,6 @@ const FacilityComplaints: React.FC = () => {
               <div className="text-gray-500 text-lg text-center py-10">
                 Đang tải dữ liệu...
               </div>
-            ) : error ? (
-              <div className="text-red-500 text-lg text-center py-10">{error}</div>
             ) : filteredComplaints.length === 0 ? (
               <div className="text-gray-400 text-center py-10">
                 Chưa có khiếu nại nào phù hợp với bộ lọc.
@@ -381,7 +391,6 @@ const FacilityComplaints: React.FC = () => {
             )}
           </div>
 
-          {/* Modal chi tiết & cập nhật */}
           {detailOpen && selected && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-8 relative">
@@ -507,7 +516,6 @@ const FacilityComplaints: React.FC = () => {
             </div>
           )}
 
-          {/* Modal xác nhận xóa */}
           {deleteTarget && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
@@ -549,6 +557,13 @@ const FacilityComplaints: React.FC = () => {
           )}
         </main>
       </div>
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };

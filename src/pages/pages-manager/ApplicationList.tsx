@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import dormData from "@/assets/data.json";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Eye, CheckCircle, Search, X, ArrowUpDown, FileText, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2, CheckCircle, Search, X, ArrowUpDown } from "lucide-react";
 import { getDormApplications, approveDormApplication, getApprovedContracts } from "@/features/auth/api";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
-
 import { useNavigate } from "react-router-dom";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 interface DormApplication {
   id: string;
@@ -66,16 +65,24 @@ const ApplicationList: React.FC = () => {
   const [step, setStep] = useState<1 | 2>(1);
   const [roomStats, setRoomStats] = useState<RoomStat[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
-  const [roomsError, setRoomsError] = useState<string | null>(null);
   const [approveLoading, setApproveLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [previewFile, setPreviewFile] = useState<{ url: string; type: string; title: string } | null>(null);
   const [dormFilter, setDormFilter] = useState<string>("all");
-  const { toast } = useToast();
+  const [notification, setNotification] = useState<{ open: boolean; title: string; description: string; type: "success" | "error" }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
 
   const filteredRoomsForSelectedApplication = useMemo(() => {
     if (!selected) return [] as RoomStat[];
@@ -131,7 +138,6 @@ const ApplicationList: React.FC = () => {
         const data = await getDormApplications();
         setApplications(data);
         setLoadingRooms(true);
-        setRoomsError(null);
         const contracts = await getApprovedContracts();
         const allRooms: RoomStat[] = [];
         dormData.dorms.forEach((dorm: DormConfig) => {
@@ -149,7 +155,7 @@ const ApplicationList: React.FC = () => {
         const stats: RoomStat[] = allRooms.map((r) => ({ ...r, residents: roomMap[r.room] || 0 }));
         setRoomStats(stats);
       } catch (e) {
-        toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải danh sách nguyện vọng." });
+        showNotification("Lỗi", "Không thể tải danh sách nguyện vọng.", "error");
       } finally {
         setLoading(false);
         setLoadingRooms(false);
@@ -161,18 +167,18 @@ const ApplicationList: React.FC = () => {
   const handleApprove = async () => {
     if (!selected) return;
     if (!approveRoom) {
-      toast({ variant: "destructive", title: "Thiếu phòng", description: "Vui lòng chọn phòng để duyệt." });
+      showNotification("Thiếu phòng", "Vui lòng chọn phòng để duyệt.", "error");
       return;
     }
     setApproveLoading(true);
     try {
       await approveDormApplication(selected.id, approveRoom, "approved");
-      toast({ title: "Duyệt thành công" });
+      showNotification("Duyệt thành công", "Đã duyệt đơn nguyện vọng.", "success");
       setSelected(null);
       setStep(1);
       setApplications(applications => applications.map(a => a.id === selected.id ? { ...a, status: "approved" } : a));
     } catch (e) {
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể duyệt nguyện vọng." });
+      showNotification("Lỗi", "Không thể duyệt nguyện vọng.", "error");
     } finally {
       setApproveLoading(false);
     }
@@ -183,12 +189,12 @@ const ApplicationList: React.FC = () => {
     setApproveLoading(true);
     try {
       await approveDormApplication(selected.id, "", "rejected");
-      toast({ title: "Đã hủy nguyện vọng" });
+      showNotification("Đã hủy nguyện vọng", "Đã từ chối đơn nguyện vọng.", "success");
       setSelected(null);
       setStep(1);
       setApplications(applications => applications.map(a => a.id === selected.id ? { ...a, status: "rejected" } : a));
     } catch (e) {
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể hủy nguyện vọng." });
+      showNotification("Lỗi", "Không thể hủy nguyện vọng.", "error");
     } finally {
       setApproveLoading(false);
     }
@@ -536,9 +542,6 @@ const ApplicationList: React.FC = () => {
                       </CardContent>
                     </Card>
 
-                    {roomsError && (
-                      <div className="text-red-600 text-center text-sm">{roomsError}</div>
-                    )}
                     {loadingRooms ? (
                       <div className="text-gray-600 text-center text-sm">Đang tải danh sách phòng...</div>
                     ) : filteredRoomsForSelectedApplication.length === 0 ? (
@@ -652,9 +655,15 @@ const ApplicationList: React.FC = () => {
           </div>
         </main>
       </div>
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };
 
 export default ApplicationList;
-

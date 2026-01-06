@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Clipboard, Check } from "lucide-react";
 import { getProfileDetail, updateAvatar, updatePassword, updateMyProfile } from "@/features/auth/api";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
+
 // Modal chỉnh sửa thông tin cá nhân cho manager
 interface EditInfoData {
   fullname: string;
@@ -306,7 +308,6 @@ const Profile: React.FC = () => {
   const [requestEditModalOpen, setRequestEditModalOpen] = useState(false);
   const handleAvatarSuccess = (url: string) => {
     setAvatarUrl(url);
-    // Cập nhật localStorage user
     const userLS = JSON.parse(localStorage.getItem("ptit_user") || "null");
     if (userLS) {
       const newUser = { ...userLS, avatar: url };
@@ -314,7 +315,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Helper to mask id
   const maskId = (id: string) => id ? id.slice(0, 4) + "..." + id.slice(-4) : "";
 
   const handlePasswordSuccess = () => {
@@ -354,7 +354,6 @@ const Profile: React.FC = () => {
 
   if (!profile) return null;
 
-  // Nếu có manager thì hiển thị thông tin quản trị viên
   interface Manager {
     id: string;
     avatar?: string;
@@ -371,29 +370,23 @@ const Profile: React.FC = () => {
 
   if (profile.manager) {
     const manager = profile.manager as Manager;
-    // Lấy role từ localStorage nếu có
     const localUser = JSON.parse(localStorage.getItem("ptit_user") || "null") as { roles?: string[] };
     const roles = (localUser && localUser.roles) || (manager && manager.roles) || [];
-    // Set avatarUrl if not already set
     if (avatarUrl === "/src/assets/ptit-logo-new.png" && manager.avatar) {
       setAvatarUrl(manager.avatar);
     }
-    // Xác định quyền chỉnh sửa thông tin cá nhân
     const canEditInfo = Array.isArray(roles) && (roles.includes("manager") || roles.includes("admin_system"));
-    // Hàm cập nhật thông tin cá nhân (gọi API thực tế ở đây)
     const handleEditInfoSave = async (data: EditInfoData) => {
       const token = localStorage.getItem("ptit_access_token");
       if (!token) throw new Error("Không tìm thấy token");
         await updateMyProfile(data);
       setProfile((prev) => prev ? { ...prev, manager: { ...(prev as { manager: Manager }).manager, ...data } } : prev);
-      // Cập nhật localStorage user
       const userLS = JSON.parse(localStorage.getItem("ptit_user") || "null");
       if (userLS) {
         const newUser = { ...userLS, ...data };
         localStorage.setItem("ptit_user", JSON.stringify(newUser));
       }
     };
-    // Hàm gửi yêu cầu chỉnh sửa thông tin cá nhân
     const handleRequestEdit = async (data: EditInfoData) => {
       // TODO: Gửi yêu cầu chỉnh sửa thông tin cá nhân đến manager
       // await sendEditRequest(data);
@@ -680,6 +673,13 @@ const Profile: React.FC = () => {
           </div>
         </main>
       </div>
+      <NotificationDialog
+        open={!!error}
+        onOpenChange={(open) => !open && setError(null)}
+        title="Thông báo"
+        description={error || ""}
+        type="error"
+      />
     </div>
   );
 };

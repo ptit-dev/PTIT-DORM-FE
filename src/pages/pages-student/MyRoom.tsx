@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { getMyRoomMembers } from "@/features/auth/api";
 import dormData from "@/assets/data.json";
 import { Badge } from "@/components/ui/badge";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 interface DormConfig {
   area_id: string;
@@ -11,11 +12,11 @@ interface DormConfig {
 }
 
 interface RoomMember {
-  username: string; // Mã sinh viên
+  username: string;
   fullname: string;
   class: string;
   avatar: string;
-  student_id: string; // user_id nội bộ hệ thống
+  student_id: string;
 }
 
 const MyRoom: React.FC = () => {
@@ -31,7 +32,6 @@ const MyRoom: React.FC = () => {
     if (!room) return null;
     const [areaId, code] = room.split("-");
     const floor = code?.charAt(0) ?? "";
-    const dorm = dorms.find((d) => d.area_id === areaId);
     const max = areaId === "B2" || areaId === "B5" ? 8 : 4;
     return {
       areaId,
@@ -48,7 +48,9 @@ const MyRoom: React.FC = () => {
         setRoom(res.room || null);
         setMembers(res.data || []);
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => {
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -93,16 +95,11 @@ const MyRoom: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-2xl shadow p-6">
-              {error && (
-                <div className="text-red-600 mb-4" role="alert">
-                  {error}
-                </div>
-              )}
               {loading ? (
                 <div className="text-gray-500 text-center">Đang tải dữ liệu...</div>
               ) : !room ? (
-                <div className="text-gray-500 text-center">
-                  Bạn chưa có phòng ở nào được duyệt.
+                <div className="text-gray-500 text-center py-8">
+                  Bạn chưa được duyệt hợp đồng.
                 </div>
               ) : (
                 <>
@@ -138,6 +135,14 @@ const MyRoom: React.FC = () => {
           </div>
         </main>
       </div>
+
+      <NotificationDialog
+        open={!!error}
+        onOpenChange={(open) => !open && setError(null)}
+        title="Thông báo"
+        description={error || ""}
+        type="error"
+      />
     </div>
   );
 };

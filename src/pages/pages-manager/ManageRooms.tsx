@@ -5,6 +5,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { getApprovedContracts, getResidentsByRoom } from "@/features/auth/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 interface DormConfig {
   area_id: string;
@@ -20,11 +21,11 @@ interface RoomStat {
 }
 
 interface Resident {
-  username: string; // Mã sinh viên (student code)
+  username: string;
   fullname: string;
   class: string;
   avatar: string;
-  student_id: string; // user_id nội bộ hệ thống
+  student_id: string;
 }
 
 const ManageRooms: React.FC = () => {
@@ -36,8 +37,23 @@ const ManageRooms: React.FC = () => {
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingResidents, setLoadingResidents] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    type: "success" | "error";
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
+
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
 
   const dorms = useMemo(() => dormData.dorms as DormConfig[], []);
   const areaOptions = useMemo(() => dorms.map((d) => d.area_id), [dorms]);
@@ -46,7 +62,6 @@ const ManageRooms: React.FC = () => {
     setLoading(true);
     getApprovedContracts()
       .then((contracts) => {
-        // Build all rooms from data.json
         const allRooms: RoomStat[] = [];
         dorms.forEach((dorm) => {
           const max = dorm.area_id === "B2" || dorm.area_id === "B5" ? 8 : 4;
@@ -56,18 +71,22 @@ const ManageRooms: React.FC = () => {
             allRooms.push({ room, residents: 0, max, area_id: dorm.area_id, floor });
           });
         });
-        // Đếm số người ở từng phòng
         const roomMap: Record<string, number> = {};
         contracts.forEach((c: { room: string }) => {
           if (c.room) roomMap[c.room] = (roomMap[c.room] || 0) + 1;
         });
-        // Gán số người vào từng phòng
-          const stats: RoomStat[] = allRooms.map((r) => ({ ...r, residents: roomMap[r.room] || 0 }));
+        const stats: RoomStat[] = allRooms.map((r) => ({ ...r, residents: roomMap[r.room] || 0 }));
         setRoomStats(stats);
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        if (e instanceof Error) {
+          showNotification("Lỗi tải dữ liệu", e.message, "error");
+        } else {
+          showNotification("Lỗi", "Đã xảy ra lỗi không xác định", "error");
+        }
+      })
       .finally(() => setLoading(false));
-        }, [dorms]);
+  }, [dorms]);
 
   const handleSelectRoom = (room: string) => {
     setSelectedRoom(room);
@@ -75,7 +94,9 @@ const ManageRooms: React.FC = () => {
     setLoadingResidents(true);
     getResidentsByRoom(room)
       .then((data: Resident[]) => setResidents(data))
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => {
+        showNotification("Lỗi tải danh sách sinh viên", e.message, "error");
+      })
       .finally(() => setLoadingResidents(false));
   };
 
@@ -170,12 +191,6 @@ const ManageRooms: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {error && (
-              <div className="text-red-600 mb-4" role="alert">
-                {error}
-              </div>
-            )}
 
             {loading ? (
               <div className="text-gray-500 text-center py-10">Đang tải dữ liệu...</div>
@@ -357,6 +372,13 @@ const ManageRooms: React.FC = () => {
           </div>
         </main>
       </div>
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };

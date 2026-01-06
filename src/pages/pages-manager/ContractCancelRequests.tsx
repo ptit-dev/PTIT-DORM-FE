@@ -3,6 +3,7 @@ import { ContractCancelRequest, verifyContractCancelRequest } from "@/features/a
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 // Dummy: Replace with real API
 const fetchCancelRequests = async (): Promise<ContractCancelRequest[]> => {
@@ -112,6 +113,7 @@ const VerifyForm: React.FC<{ request: ContractCancelRequest; onClose: () => void
   const [status, setStatus] = useState<"approved" | "rejected">("approved");
   const [managerNote, setManagerNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -121,9 +123,9 @@ const VerifyForm: React.FC<{ request: ContractCancelRequest; onClose: () => void
       onClose();
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(e.message);
+        setError(e.message);
       } else {
-        alert("Có lỗi xảy ra");
+        setError("Có lỗi xảy ra");
       }
     } finally {
       setLoading(false);
@@ -159,6 +161,13 @@ const VerifyForm: React.FC<{ request: ContractCancelRequest; onClose: () => void
           {loading ? "Đang xử lý..." : "Xác nhận"}
         </Button>
       </div>
+      <NotificationDialog
+        open={!!error}
+        onOpenChange={(open) => !open && setError(null)}
+        title="Thông báo"
+        description={error || ""}
+        type="error"
+      />
     </div>
   );
 };

@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, X, Loader2, FileText } from "lucide-react";
-import { DormApplication } from "@/model/DormApplication";
+import { Search, X, Loader2 } from "lucide-react";
 import { Contract, NullableStringFromDB } from "@/model/Contract";
 import ContractPreview from "@/components/forms/ContractForm";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 const statusMap: Record<string, string> = {
   temporary: "Chờ duyệt",
@@ -30,7 +30,6 @@ const genderMap: Record<string, string> = {
 const ContractList: React.FC = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
@@ -42,7 +41,17 @@ const ContractList: React.FC = () => {
   const [verifyNote, setVerifyNote] = useState("");
   const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null);
   const [contractPreview, setContractPreview] = useState<{ open: boolean; contract?: Contract }>({ open: false });
+  const [notification, setNotification] = useState<{ open: boolean; title: string; description: string; type: "success" | "error" }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
 
   const fetchContracts = async () => {
     setLoading(true);
@@ -51,9 +60,9 @@ const ContractList: React.FC = () => {
       setContracts(res.data || []);
     } catch (e: unknown) {
       if (e instanceof Error) {
-        setError(e.message);
+        showNotification("Lỗi", e.message, "error");
       } else {
-        setError("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setLoading(false);
@@ -62,7 +71,6 @@ const ContractList: React.FC = () => {
 
   useEffect(() => {
     fetchContracts();
-    // eslint-disable-next-line
   }, []);
 
   const dormOptions = React.useMemo(() => {
@@ -120,7 +128,6 @@ const ContractList: React.FC = () => {
     setVerifyNote("");
   };
 
-  // Filter contracts
   const filteredContracts = contracts.filter((c) => {
     const matchesSearch =
       searchTerm === "" ||
@@ -141,12 +148,13 @@ const ContractList: React.FC = () => {
     try {
       await verifyContract(String(modal.contract.id), { status: verifyStatus, note: verifyNote });
       setModal({ open: false });
+      showNotification("Thành công", "Đã cập nhật trạng thái hợp đồng.", "success");
       fetchContracts();
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert(e.message);
+        showNotification("Lỗi", e.message, "error");
       } else {
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setVerifyLoading(false);
@@ -180,7 +188,6 @@ const ContractList: React.FC = () => {
               </div>
             </div>
 
-            {/* Bộ lọc */}
             <div className="flex flex-wrap gap-4 mb-6">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -242,8 +249,6 @@ const ContractList: React.FC = () => {
 
             {loading ? (
               <div className="text-gray-500 text-lg text-center py-10">Đang tải dữ liệu...</div>
-            ) : error ? (
-              <div className="text-red-500 text-lg text-center py-10">{error}</div>
             ) : filteredContracts.length === 0 ? (
               <div className="text-gray-400 text-center py-10">
                 {contracts.length === 0 ? "Chưa có hợp đồng nào." : "Không tìm thấy hợp đồng phù hợp."}
@@ -306,7 +311,6 @@ const ContractList: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Modal xem/duyệt hợp đồng */}
           <Dialog open={modal.open} onOpenChange={(open) => !open && setModal({ open: false })}>
             <DialogContent className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
@@ -317,7 +321,6 @@ const ContractList: React.FC = () => {
 
               {modal.contract && (
                 <form className="space-y-6 mt-4">
-                  {/* Ảnh giấy tờ */}
                   <div className="flex flex-wrap gap-8 items-center justify-center mb-2">
                     {modal.contract.dorm_application?.avatar_front && (
                       <div className="flex flex-col items-center">
@@ -369,7 +372,6 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Thông tin cá nhân */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <label className="font-semibold text-gray-800">Mã sinh viên</label>
@@ -405,7 +407,6 @@ const ContractList: React.FC = () => {
                     <Input value={modal.contract.dorm_application?.cccd_issue_place || ""} readOnly disabled className="disabled:text-gray-900 disabled:opacity-100" />
                   </div>
 
-                  {/* Thông tin liên hệ */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <label className="font-semibold text-gray-800">Số điện thoại</label>
@@ -421,7 +422,6 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Thông tin học tập */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="font-semibold text-gray-800">Lớp</label>
@@ -444,7 +444,6 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Thông tin cá nhân bổ sung */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="font-semibold text-gray-800">Dân tộc</label>
@@ -456,7 +455,6 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Người bảo lãnh */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="font-semibold text-gray-800">Họ tên người bảo lãnh</label>
@@ -468,13 +466,11 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Đối tượng ưu tiên */}
                   <div className="space-y-2">
                     <label className="font-semibold text-gray-800">Đối tượng ưu tiên</label>
                     <Input value={modal.contract.dorm_application?.priority_group || "Không thuộc diện ưu tiên"} readOnly disabled className="disabled:text-gray-900 disabled:opacity-100" />
                   </div>
 
-                  {/* Thông tin hợp đồng */}
                   <div className="border-t pt-4">
                     <h3 className="text-lg font-bold text-red-700 mb-4">Thông tin hợp đồng</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -526,7 +522,6 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Ghi chú */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="font-semibold text-gray-800">Ghi chú từ đơn đăng ký</label>
@@ -538,7 +533,6 @@ const ContractList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Form duyệt hợp đồng */}
                   {modal.contract.status === 'temporary' && modal.contract.status_payment === 'paid' && (
                     <div className="border-t pt-4">
                       <h3 className="text-lg font-bold text-red-700 mb-4">Duyệt hợp đồng</h3>
@@ -603,7 +597,6 @@ const ContractList: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Modal preview ảnh */}
           <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
             <DialogContent className="max-w-5xl w-full max-h-[95vh] p-0 overflow-hidden">
               <DialogHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0 pr-12">
@@ -643,6 +636,13 @@ const ContractList: React.FC = () => {
           </Dialog>
         </main>
       </div>
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };

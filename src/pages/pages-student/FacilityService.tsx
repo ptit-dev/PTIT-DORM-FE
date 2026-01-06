@@ -8,6 +8,7 @@ import {
   createFacilityComplaint,
   deleteFacilityComplaint,
 } from "@/features/auth/facilityComplaintApi";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 type TabKey = "me" | "room";
 
@@ -24,7 +25,6 @@ const FacilityService: React.FC = () => {
   const [roomComplaints, setRoomComplaints] = useState<FacilityComplaint[]>([]);
   const [roomInfo, setRoomInfo] = useState<string>("");
   const [roomComplaintsLoading, setRoomComplaintsLoading] = useState(false);
-  const [roomComplaintsError, setRoomComplaintsError] = useState<string | null>(null);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
@@ -38,18 +38,34 @@ const FacilityService: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<FacilityComplaint | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    type: "success" | "error";
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
+
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
+
   const loadRoomComplaints = async () => {
     setRoomComplaintsLoading(true);
-    setRoomComplaintsError(null);
     try {
       const data: MyRoomComplaintsResponse = await getMyRoomFacilityComplaints();
       setRoomInfo(data.room);
       setRoomComplaints(data.data || []);
     } catch (error: unknown) {
       if (error instanceof Error) {
-        setRoomComplaintsError(error.message);
-      } else {
-        setRoomComplaintsError("Đã xảy ra lỗi không xác định.");
+        const msg = error.message === "No approved contract with room found for this student"
+          ? "Hệ thống không tìm thấy hợp đồng nội trú được duyệt của bạn."
+          : error.message;
+        showNotification("Thông báo", msg, "error");
       }
     } finally {
       setRoomComplaintsLoading(false);
@@ -67,7 +83,6 @@ const FacilityService: React.FC = () => {
 
   useEffect(() => {
     loadRoomComplaints();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleOpenCreate = () => {
@@ -80,14 +95,11 @@ const FacilityService: React.FC = () => {
   const handleSubmitCreate = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!roomInfo) {
-      // Không có phòng hiện tại
-      // eslint-disable-next-line no-alert
-      alert("Bạn chưa có phòng nội trú được duyệt nên không thể tạo khiếu nại.");
+      showNotification("Lỗi", "Bạn chưa có phòng nội trú được duyệt nên không thể tạo khiếu nại.", "error");
       return;
     }
     if (!createTitle.trim()) {
-      // eslint-disable-next-line no-alert
-      alert("Vui lòng nhập tiêu đề khiếu nại.");
+      showNotification("Lỗi", "Vui lòng nhập tiêu đề khiếu nại.", "error");
       return;
     }
 
@@ -104,13 +116,12 @@ const FacilityService: React.FC = () => {
       setCreateDescription("");
       setCreateProofFile(null);
       await loadRoomComplaints();
+      showNotification("Thành công", "Gửi khiếu nại thành công.", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
-        // eslint-disable-next-line no-alert
-        alert(error.message);
+        showNotification("Lỗi", error.message, "error");
       } else {
-        // eslint-disable-next-line no-alert
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setCreateSubmitting(false);
@@ -135,13 +146,12 @@ const FacilityService: React.FC = () => {
       await deleteFacilityComplaint(deleteTarget.id);
       setDeleteTarget(null);
       await loadRoomComplaints();
+      showNotification("Thành công", "Đã xóa khiếu nại.", "success");
     } catch (error: unknown) {
       if (error instanceof Error) {
-        // eslint-disable-next-line no-alert
-        alert(error.message);
+        showNotification("Lỗi", error.message, "error");
       } else {
-        // eslint-disable-next-line no-alert
-        alert("Đã xảy ra lỗi không xác định.");
+        showNotification("Lỗi", "Đã xảy ra lỗi không xác định.", "error");
       }
     } finally {
       setDeleteSubmitting(false);
@@ -169,9 +179,6 @@ const FacilityService: React.FC = () => {
   const renderComplaintsTable = (complaints: FacilityComplaint[], isOwnList: boolean) => {
     if (roomComplaintsLoading) {
       return <div className="text-gray-500 text-lg text-center py-10">Đang tải dữ liệu...</div>;
-    }
-    if (roomComplaintsError) {
-      return <div className="text-red-500 text-lg text-center py-10">{roomComplaintsError}</div>;
     }
     if (complaints.length === 0) {
       return <div className="text-gray-400 text-center py-10">Chưa có khiếu nại nào.</div>;
@@ -208,7 +215,7 @@ const FacilityService: React.FC = () => {
                     >
                       <img
                         src={complaint.proof}
-                        alt="Ảnh minh chứng khiếu nại"
+                        alt="Minh chứng"
                         className="h-12 w-16 rounded border object-cover"
                       />
                     </a>
@@ -281,22 +288,20 @@ const FacilityService: React.FC = () => {
             <div className="border-b border-gray-200 mb-4 flex flex-wrap">
               <button
                 type="button"
-                className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition ${
-                  activeTab === "me"
+                className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition ${activeTab === "me"
                     ? "border-red-600 text-red-700"
                     : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                  }`}
                 onClick={() => setActiveTab("me")}
               >
                 Khiếu nại của tôi
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition ${
-                  activeTab === "room"
+                className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition ${activeTab === "room"
                     ? "border-red-600 text-red-700"
                     : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                  }`}
                 onClick={() => setActiveTab("room")}
               >
                 Khiếu nại phòng hiện tại
@@ -310,8 +315,8 @@ const FacilityService: React.FC = () => {
                     Phòng hiện tại của bạn: <span className="font-semibold text-red-700">{roomInfo}</span>
                   </span>
                 ) : (
-                  <span className="text-orange-600">
-                    Hệ thống chưa tìm thấy phòng nội trú được duyệt cho tài khoản này.
+                  <span className="text-gray-500">
+                    Bạn chưa có thông tin phòng ở.
                   </span>
                 )}
               </div>
@@ -322,7 +327,6 @@ const FacilityService: React.FC = () => {
               : renderComplaintsTable(roomComplaints, false)}
           </div>
 
-          {/* Modal tạo khiếu nại */}
           {createModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-8 relative">
@@ -330,7 +334,6 @@ const FacilityService: React.FC = () => {
                   type="button"
                   className="absolute top-3 right-3 text-gray-400 hover:text-red-600 text-2xl font-bold"
                   onClick={() => setCreateModalOpen(false)}
-                  aria-label="Đóng"
                   disabled={createSubmitting}
                 >
                   ×
@@ -409,7 +412,6 @@ const FacilityService: React.FC = () => {
             </div>
           )}
 
-          {/* Modal chi tiết khiếu nại */}
           {detailOpen && detailComplaint && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full p-8 relative">
@@ -497,7 +499,6 @@ const FacilityService: React.FC = () => {
             </div>
           )}
 
-          {/* Modal xác nhận xóa */}
           {deleteTarget && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
@@ -539,6 +540,14 @@ const FacilityService: React.FC = () => {
           )}
         </main>
       </div>
+
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };

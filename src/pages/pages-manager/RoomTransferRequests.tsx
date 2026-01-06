@@ -3,34 +3,46 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { Clipboard, Eye } from "lucide-react";
 import {
   RoomTransferRequest,
   getRoomTransferRequests,
   managerConfirmRoomTransferRequest,
 } from "@/features/auth/roomTransferApi";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 
 const RoomTransferRequests: React.FC = () => {
   const user = useMemo(() => JSON.parse(localStorage.getItem("ptit_user") || "null"), []);
-  const { toast } = useToast();
 
   const [requests, setRequests] = useState<RoomTransferRequest[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [dormFilter, setDormFilter] = useState<string>("all");
   const [roomFilter, setRoomFilter] = useState<string>("all");
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    type: "success" | "error";
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "success",
+  });
+
+  const showNotification = (title: string, description: string, type: "success" | "error") => {
+    setNotification({ open: true, title, description, type });
+  };
 
   const loadData = async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await getRoomTransferRequests();
       setRequests(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Không thể tải danh sách yêu cầu";
-      setError(msg);
+      showNotification("Lỗi", msg, "error");
     } finally {
       setLoading(false);
     }
@@ -38,7 +50,6 @@ const RoomTransferRequests: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const dormOptions = useMemo(() => {
@@ -93,14 +104,15 @@ const RoomTransferRequests: React.FC = () => {
   ) => {
     try {
       await managerConfirmRoomTransferRequest(id, status);
-      toast({
-        title: status === "accepted" ? "Đã duyệt yêu cầu" : "Đã từ chối yêu cầu",
-        description: "Trạng thái yêu cầu chuyển phòng đã được cập nhật.",
-      });
+      showNotification(
+        status === "accepted" ? "Đã duyệt yêu cầu" : "Đã từ chối yêu cầu",
+        "Trạng thái yêu cầu chuyển phòng đã được cập nhật.",
+        "success"
+      );
       loadData();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Không thể cập nhật trạng thái";
-      toast({ variant: "destructive", title: "Lỗi", description: msg });
+      showNotification("Lỗi", msg, "error");
     }
   };
 
@@ -124,9 +136,9 @@ const RoomTransferRequests: React.FC = () => {
   const handleCopyId = async (id: string) => {
     try {
       await navigator.clipboard.writeText(id);
-      toast({ title: "Đã copy ID", description: id, duration: 1500 });
+      showNotification("Đã sao chép", `Đã copy ID: ${id}`, "success");
     } catch {
-      toast({ variant: "destructive", title: "Không thể copy ID" });
+      showNotification("Lỗi", "Không thể copy ID", "error");
     }
   };
 
@@ -192,7 +204,7 @@ const RoomTransferRequests: React.FC = () => {
                 ))}
               </select>
             </div>
-            {error && <div className="text-red-600 mb-3">{error}</div>}
+            
             {loading ? (
               <div className="text-gray-600 text-center">Đang tải danh sách...</div>
             ) : filteredRequests.length === 0 ? (
@@ -202,8 +214,8 @@ const RoomTransferRequests: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-[600px] w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100 text-left">
+                  <thead className="bg-gray-100">
+                    <tr className="text-left">
                       <th className="p-2">ID</th>
                       <th className="p-2">Sinh viên A</th>
                       <th className="p-2">Sinh viên B</th>
@@ -296,6 +308,13 @@ const RoomTransferRequests: React.FC = () => {
           </div>
         </main>
       </div>
+      <NotificationDialog
+        open={notification.open}
+        onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+        title={notification.title}
+        description={notification.description}
+        type={notification.type}
+      />
     </div>
   );
 };
