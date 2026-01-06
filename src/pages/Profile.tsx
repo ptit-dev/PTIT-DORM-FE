@@ -348,6 +348,13 @@ const Profile: React.FC = () => {
             <div className="text-red-500 text-lg">{error}</div>
           </main>
         </div>
+        <NotificationDialog
+          open={!!error}
+          onOpenChange={(open) => !open && setError(null)}
+          title="Lỗi"
+          description={error || ""}
+          type="error"
+        />
       </div>
     );
   }

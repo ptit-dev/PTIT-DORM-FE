@@ -155,10 +155,33 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #dc2626;
+  background: #d1d5db;
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #b91c1c;
+  background: #9ca3af;
+}
+
+/* Chatbot Watermark */
+.chatbot-watermark {
+  position: relative;
+  overflow: hidden;
+}
+
+.chatbot-watermark::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 290px;
+  height: 290px;
+  background-image: url('https://res.cloudinary.com/drly2lfdz/image/upload/v1766835711/iconptit_gtkanp.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
 }

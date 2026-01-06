@@ -149,11 +149,11 @@ const ChatbotButton = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-3 overflow-y-auto text-sm space-y-3 custom-scrollbar">
+          <div className="flex-1 p-3 overflow-y-auto text-sm space-y-3 custom-scrollbar chatbot-watermark relative">
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'} relative z-10`}
               >
                 {msg.type === 'bot' && (
                   <img
