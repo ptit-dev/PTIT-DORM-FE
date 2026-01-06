@@ -1,3 +1,28 @@
+// Quản lý/admin duyệt hoặc từ chối yêu cầu hủy hợp đồng
+export async function verifyContractCancelRequest(
+  id: string,
+  data: { status: "approved" | "rejected"; manager_note?: string }
+): Promise<ContractCancelRequest> {
+  const token = getAccessToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/protected/contract-cancel-requests/${id}/verify`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "ngrok-skip-browser-warning": "true",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body: unknown = await res.json().catch(() => ({}));
+    const message =
+      typeof body === "object" && body !== null && "message" in body && typeof (body as { message?: unknown }).message === "string"
+        ? (body as { message: string }).message
+        : "Không thể duyệt yêu cầu hủy hợp đồng";
+    throw new Error(message);
+  }
+  return res.json();
+}
 import { API_BASE_URL } from "@/config/apiConfig";
 
 export type ContractCancelStatus = "pending" | "approved" | "rejected";
