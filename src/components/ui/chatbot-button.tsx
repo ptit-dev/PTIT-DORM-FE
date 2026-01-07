@@ -59,7 +59,6 @@ const ChatbotButton = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  if (!isVisible) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
