@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getMyContracts } from "@/features/auth/api";
+import { getMyContracts, renewalContract } from "@/features/auth/api";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import ContractCard from "@/components/ui/contract-card";
@@ -7,6 +7,7 @@ import ContractDetailModal from "@/components/forms/ContractDetailModal";
 import { FileText } from "lucide-react";
 import { Contract } from "@/model/Contract";
 import { NotificationDialog } from "@/components/ui/notification-dialog";
+import { getMyContractCancelRequests } from "@/features/auth/contractCancelApi";
 
 type LocalCancelStatus = "pending" | "approved" | "rejected";
 
@@ -24,6 +25,13 @@ const MyContract: React.FC = () => {
   const [cancelRequests, setCancelRequests] = useState<LocalCancelRequest[]>([]);
   const [showCodeMap, setShowCodeMap] = useState<Record<string, boolean>>({});
   const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({});
+  const [renewalModal, setRenewalModal] = useState<{ open: boolean; contract?: Contract }>({ open: false });
+  const [renewalForm, setRenewalForm] = useState<{
+    semester: string;
+    image_bill: string;
+    note: string;
+  }>({ semester: '1', image_bill: '', note: '' });
+  const [renewalLoading, setRenewalLoading] = useState(false);
   const [notification, setNotification] = useState<{ open: boolean; title: string; description: string; type: "success" | "error" }>({
     open: false,
     title: "",
@@ -42,19 +50,34 @@ const MyContract: React.FC = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
-    getMyContracts()
-      .then((contractsRes) => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [contractsRes, cancelRes] = await Promise.all([
+          getMyContracts(),
+          getMyContractCancelRequests(),
+        ]);
         setContracts(contractsRes);
-      })
-      .catch((e: unknown) => {
+        setCancelRequests(
+          cancelRes.map((c) => ({
+            contract_id: c.contract_id,
+            status: c.status,
+            reason: c.reason,
+            manager_note: c.manager_note,
+          })),
+        );
+      } catch (e: unknown) {
         if (e instanceof Error) {
           showNotification("Lỗi", e.message, "error");
         } else {
           showNotification("Lỗi", "Đã xảy ra lỗi khi tải dữ liệu hợp đồng.", "error");
         }
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   const toggleShowCode = (id: string | number) => {
@@ -79,6 +102,72 @@ const MyContract: React.FC = () => {
   const handlePaymentSuccess = () => {
     setSelectedContract(null);
     getMyContracts().then(setContracts).catch(console.error);
+  };
+
+  const isContractExpired = (contract: Contract): boolean => {
+    // Ưu tiên trạng thái từ backend
+    if (contract.status === "expired") return true;
+
+    // Fallback: tự tính theo ngày kết thúc
+    if (!contract.end_date) return false;
+    return new Date(contract.end_date) < new Date();
+  };
+
+  const calculateRenewalEndDate = (semester: string): string => {
+    const today = new Date();
+    const startDate = today;
+    let monthsToAdd = 5; // Mặc định cho kỳ 1, 2
+
+    if (semester === '3') {
+      monthsToAdd = 1.5; // 1 tháng rưỡi = 45 ngày
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 45);
+      return endDate.toISOString().split('T')[0];
+    }
+
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + monthsToAdd);
+    return endDate.toISOString().split('T')[0];
+  };
+
+  const calculateRenewalAmount = (semester: string, monthlyFee?: number): number => {
+    if (!monthlyFee) return 0;
+    if (semester === '3') {
+      return Math.round(monthlyFee * 1.5);
+    }
+    return monthlyFee * 5;
+  };
+
+  const handleRenewalSubmit = async () => {
+    if (!renewalModal.contract) return;
+    
+    setRenewalLoading(true);
+    try {
+      const endDate = calculateRenewalEndDate(renewalForm.semester);
+      const totalAmount = calculateRenewalAmount(renewalForm.semester, renewalModal.contract.monthly_fee);
+
+      await renewalContract(String(renewalModal.contract.id), {
+        semester: renewalForm.semester,
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: endDate,
+        total_amount: totalAmount,
+        image_bill: renewalForm.image_bill,
+        note: renewalForm.note,
+      });
+
+      showNotification("Thành công", "Gia hạn hợp đồng thành công!", "success");
+      setRenewalModal({ open: false });
+      setRenewalForm({ semester: '1', image_bill: '', note: '' });
+      getMyContracts().then(setContracts).catch(console.error);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        showNotification("Lỗi", e.message, "error");
+      } else {
+        showNotification("Lỗi", "Đã xảy ra lỗi khi gia hạn hợp đồng.", "error");
+      }
+    } finally {
+      setRenewalLoading(false);
+    }
   };
 
   return (
@@ -135,16 +224,29 @@ const MyContract: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
                 {contracts.map((c) => {
                   const codeId = String(c.code ?? c.id);
+                  const isExpired = isContractExpired(c);
                   return (
-                    <ContractCard
-                      key={c.id}
-                      contract={c}
-                      isCodeVisible={showCodeMap[codeId] || false}
-                      isCopied={copiedMap[codeId] || false}
-                      onToggleCode={() => toggleShowCode(c.id)}
-                      onCopyCode={() => copyCode(codeId)}
-                      onViewDetail={() => setSelectedContract(c)}
-                    />
+                    <div key={c.id} className="relative">
+                      <ContractCard
+                        contract={c}
+                        isCodeVisible={showCodeMap[codeId] || false}
+                        isCopied={copiedMap[codeId] || false}
+                        onToggleCode={() => toggleShowCode(c.id)}
+                        onCopyCode={() => copyCode(codeId)}
+                        onViewDetail={() => setSelectedContract(c)}
+                      />
+                      {isExpired && (
+                        <button
+                          onClick={() => {
+                            setRenewalModal({ open: true, contract: c });
+                            setRenewalForm({ semester: '1', image_bill: '', note: '' });
+                          }}
+                          className="absolute top-3 right-3 px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full hover:from-red-600 hover:to-red-700 transition shadow-lg animate-pulse"
+                        >
+                          Gia hạn ngay
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -159,6 +261,101 @@ const MyContract: React.FC = () => {
               onCancelRequestSubmit={handleCancelRequestSubmit}
               onPaymentSuccess={handlePaymentSuccess}
             />
+          )}
+
+          {renewalModal.open && renewalModal.contract && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 relative">
+                <button
+                  className="absolute top-3 right-3 text-gray-400 hover:text-red-600 text-2xl font-bold"
+                  onClick={() => setRenewalModal({ open: false })}
+                  aria-label="Đóng"
+                  disabled={renewalLoading}
+                >×</button>
+                
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-red-700 mb-2">Gia hạn hợp đồng</h3>
+                  <p className="text-sm text-gray-600">
+                    Phòng: <span className="font-semibold">{renewalModal.contract.room}</span>
+                  </p>
+                </div>
+
+                <form className={`space-y-5 ${renewalLoading ? 'opacity-60 pointer-events-none' : ''}`} onSubmit={(e) => {
+                  e.preventDefault();
+                  handleRenewalSubmit();
+                }}>
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-2">Chọn học kỳ <span className="text-red-600">*</span></label>
+                    <select
+                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-red-500 focus:outline-none"
+                      value={renewalForm.semester}
+                      onChange={(e) => setRenewalForm({ ...renewalForm, semester: e.target.value })}
+                      required
+                      disabled={renewalLoading}
+                    >
+                      <option value="1">Học kỳ 1 (5 tháng)</option>
+                      <option value="2">Học kỳ 2 (5 tháng)</option>
+                      <option value="3">Học kỳ 3 (1 tháng rưỡi)</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                    <h4 className="font-bold text-red-700 mb-3">Chi tiết gia hạn:</h4>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p>• Ngày bắt đầu: <span className="font-semibold">{new Date().toLocaleDateString('vi-VN')}</span></p>
+                      <p>• Ngày kết thúc: <span className="font-semibold">{new Date(calculateRenewalEndDate(renewalForm.semester)).toLocaleDateString('vi-VN')}</span></p>
+                      <p>• Phí hàng tháng: <span className="font-semibold">{(renewalModal.contract.monthly_fee || 0).toLocaleString('vi-VN')}đ</span></p>
+                    </div>
+                    <div className="border-t-2 border-red-200 pt-3 mt-3">
+                      <p className="font-bold text-red-700">Tổng tiền: <span className="text-2xl text-red-700">{calculateRenewalAmount(renewalForm.semester, renewalModal.contract.monthly_fee).toLocaleString('vi-VN')}đ</span></p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-2">Ảnh hóa đơn tiền KTX <span className="text-red-600">*</span></label>
+                    <input
+                      type="text"
+                      placeholder="Nhập URL ảnh hoặc đường dẫn file"
+                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-red-500 focus:outline-none"
+                      value={renewalForm.image_bill}
+                      onChange={(e) => setRenewalForm({ ...renewalForm, image_bill: e.target.value })}
+                      required
+                      disabled={renewalLoading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-gray-700 mb-2">Ghi chú (không bắt buộc)</label>
+                    <textarea
+                      placeholder="Thêm ghi chú nếu cần thiết..."
+                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2 focus:border-red-500 focus:outline-none resize-none"
+                      rows={3}
+                      value={renewalForm.note}
+                      onChange={(e) => setRenewalForm({ ...renewalForm, note: e.target.value })}
+                      disabled={renewalLoading}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
+                      onClick={() => setRenewalModal({ open: false })}
+                      disabled={renewalLoading}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 rounded-lg bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold hover:from-red-700 hover:to-red-800 transition"
+                      disabled={renewalLoading}
+                    >
+                      {renewalLoading ? 'Đang xử lý...' : 'Xác nhận gia hạn'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           )}
         </main>
       </div>

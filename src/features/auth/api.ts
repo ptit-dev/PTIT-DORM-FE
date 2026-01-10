@@ -79,6 +79,25 @@ export async function getMyContracts() {
   return data.data || [];
 }
 
+// Gia hạn hợp đồng
+export async function renewalContract(contractId: string, data: { [key: string]: unknown }) {
+  const token = localStorage.getItem("ptit_access_token");
+  const res = await fetch(`${API_BASE_URL}/api/v1/protected/contracts/${contractId}/renewal`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'ngrok-skip-browser-warning': 'true',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Không thể gia hạn hợp đồng");
+  }
+  return res.json();
+}
+
 // ===================== DORM AREA =====================
 export interface DormAreaData {
   name: string;
@@ -311,6 +330,11 @@ export async function login(username: string, password: string) {
 }
 
 
+interface ApiErrorBody {
+  message?: string;
+  error?: string;
+}
+
 export async function sendOtp(email: string, action: string = "dangkynguyenvong") {
   const res = await fetch(`${API_BASE_URL}/api/v1/send-otp`, {
     method: "POST",
@@ -320,7 +344,10 @@ export async function sendOtp(email: string, action: string = "dangkynguyenvong"
     },
     body: JSON.stringify({ action, email })
   });
-  if (!res.ok) throw new Error("Gửi OTP thất bại");
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(data.message || data.error || "Gửi OTP thất bại");
+  }
   return await res.json();
 }
 
@@ -333,7 +360,10 @@ export async function verifyOtp(email: string, otp: string, action: string = "da
     },
     body: JSON.stringify({ action, email, otp })
   });
-  if (!res.ok) throw new Error("Xác thực OTP thất bại");
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(data.message || data.error || "Xác thực OTP thất bại");
+  }
   return await res.json(); // expect { token: string }
 }
 
@@ -386,7 +416,10 @@ export async function submitDormApplication(data: { [key: string]: unknown }, to
     },
     body: formData
   });
-  if (!res.ok) throw new Error("Đăng ký thất bại");
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(data.message || data.error || "Đăng ký thất bại");
+  }
   return await res.json();
 }
 

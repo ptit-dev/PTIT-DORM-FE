@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import FullCalendar from '@fullcalendar/react';
@@ -53,6 +53,9 @@ const DutySchedulePage: React.FC = () => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
+  
+  // Kiểm tra xem user có phải là manager không
+  const isManager = user?.roles && (user.roles.includes('manager') || user.roles.includes('admin_system'));
 
   const [notification, setNotification] = useState<{
     open: boolean;
@@ -66,9 +69,9 @@ const DutySchedulePage: React.FC = () => {
     type: "success",
   });
 
-  const showNotification = (title: string, description: string, type: "success" | "error") => {
+  const showNotification = useCallback((title: string, description: string, type: "success" | "error") => {
     setNotification({ open: true, title, description, type });
-  };
+  }, []);
 
   const fetchStaff = async () => {
     try {
@@ -79,16 +82,7 @@ const DutySchedulePage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchStaff();
-    fetchSchedules();
-  }, []);
-
-  useEffect(() => {
-    if (modalOpen) fetchStaff();
-  }, [modalOpen]);
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getDutySchedules();
@@ -112,7 +106,16 @@ const DutySchedulePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [area, showNotification]);
+
+  useEffect(() => {
+    fetchStaff();
+    fetchSchedules();
+  }, [area, fetchSchedules]);
+
+  useEffect(() => {
+    if (modalOpen) fetchStaff();
+  }, [modalOpen]);
 
   useEffect(() => {
     const filtered = allSchedules.filter((s) => s.area_id === area);
@@ -205,7 +208,9 @@ const DutySchedulePage: React.FC = () => {
                 <select className="border rounded px-3 py-2 text-red-700 font-semibold" value={area} onChange={e => setArea(e.target.value)}>
                   {AREA_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
-                <button className="px-5 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition" onClick={() => openAdd()}>Thêm lịch trực</button>
+                {isManager && (
+                  <button className="px-5 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition" onClick={() => openAdd()}>Thêm lịch trực</button>
+                )}
               </div>
             </div>
             <FullCalendar
@@ -222,7 +227,7 @@ const DutySchedulePage: React.FC = () => {
               height="auto"
               eventDisplay="block"
               eventContent={renderEventContent}
-              dateClick={(info) => openAdd(info.dateStr)}
+              dateClick={(info) => isManager && openAdd(info.dateStr)}
               eventClick={(info) => openEdit(info.event)}
             />
           </div>
@@ -235,8 +240,9 @@ const DutySchedulePage: React.FC = () => {
                   aria-label="Đóng"
                   disabled={loading}
                 >×</button>
-                <h3 className="text-xl font-bold text-red-700 mb-4 text-center">{editId ? "Sửa lịch trực" : "Thêm lịch trực"}</h3>
-                <form className={`space-y-4 ${loading ? 'opacity-60 pointer-events-none' : ''}`} onSubmit={handleSubmit}>
+                <h3 className="text-xl font-bold text-red-700 mb-4 text-center">{editId && isManager ? "Sửa lịch trực" : "Chi tiết lịch trực"}</h3>
+                {isManager ? (
+                  <form className={`space-y-4 ${loading ? 'opacity-60 pointer-events-none' : ''}`} onSubmit={handleSubmit}>
                   <div className="flex flex-col gap-2">
                     <label className="font-medium text-gray-700">Ngày trực</label>
                     <input className="border rounded px-3 py-2" type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} disabled={loading} />
@@ -280,6 +286,29 @@ const DutySchedulePage: React.FC = () => {
                     </button>
                   </div>
                 </form>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="font-medium text-gray-700">Ngày trực</label>
+                      <div className="border rounded px-3 py-2 bg-gray-50 text-gray-700">{form.date}</div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="font-medium text-gray-700">Khu vực</label>
+                      <div className="border rounded px-3 py-2 bg-gray-50 text-gray-700">{AREA_OPTIONS.find(opt => opt.value === form.area_id)?.label}</div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="font-medium text-gray-700">Cán bộ trực</label>
+                      <div className="border rounded px-3 py-2 bg-gray-50 text-gray-700">{staffList.find(s => s.staff_id === form.staff_id || s.id === form.staff_id)?.full_name || staffList.find(s => s.staff_id === form.staff_id || s.id === form.staff_id)?.fullname}</div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="font-medium text-gray-700">Mô tả</label>
+                      <div className="border rounded px-3 py-2 bg-gray-50 text-gray-700">{form.description || 'Không có mô tả'}</div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6">
+                      <button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setModalOpen(false)}>Đóng</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -327,7 +356,7 @@ const DutySchedulePage: React.FC = () => {
   function renderEventContent(eventInfo: EventContentArg) {
     const s = eventInfo.event.extendedProps;
     return (
-      <div className="truncate text-xs font-semibold px-2 py-1 rounded flex items-center gap-2" style={{ background: eventInfo.backgroundColor || '#f87171', color: '#fff' }}>
+      <div className="truncate text-xs font-semibold px-2 py-1 rounded flex items-center gap-2 cursor-pointer hover:opacity-80" style={{ background: eventInfo.backgroundColor || '#f87171', color: '#fff' }}>
         {s && s.staff && s.staff.avatar && (
           <img src={s.staff.avatar} alt={s.staff.fullname} className="w-5 h-5 rounded-full object-cover border inline-block" />
         )}

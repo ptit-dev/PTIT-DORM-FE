@@ -26,6 +26,7 @@ import DutySchedule from "./pages/pages-manager/DutySchedule";
 import ContractList from "./pages/pages-manager/ContractList";
 import ElectricBillList from "./pages/pages-manager/ElectricBillList";
 import FacilityComplaints from "./pages/pages-manager/FacilityComplaints";
+import ContractCancelRequestsPage from "./pages/pages-manager/ContractCancelRequests";
 import LogMonitorPage from "./pages/LogMonitor";
 import AdminAccounts from "./pages/AdminAccounts";
 import BackupData from "./pages/BackupData";
@@ -237,6 +238,14 @@ const App = () => (
             element={(
               <RequireAuth allowedRoles={["admin_system", "manager", "non-manager"]}>
                 <FacilityComplaints />
+              </RequireAuth>
+            )}
+          />
+          <Route
+            path="/contract-cancel-requests"
+            element={(
+              <RequireAuth allowedRoles={["admin_system", "manager"]}>
+                <ContractCancelRequestsPage />
               </RequireAuth>
             )}
           />

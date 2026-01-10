@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { NotificationDialog } from "@/components/ui/notification-dialog";
+import Header from "@/components/layout/Header";
+import Sidebar from "@/components/layout/Sidebar";
 
 // Dummy: Replace with real API
 const fetchCancelRequests = async (): Promise<ContractCancelRequest[]> => {
@@ -13,7 +15,7 @@ const fetchCancelRequests = async (): Promise<ContractCancelRequest[]> => {
   });
   if (!res.ok) throw new Error("Không thể lấy danh sách yêu cầu hủy hợp đồng");
   const data = await res.json();
-  return data.data || [];
+  return data || [];
 };
 
 const ContractCancelRequestsPage: React.FC = () => {
@@ -22,6 +24,7 @@ const ContractCancelRequestsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ContractCancelRequest | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const user = JSON.parse(localStorage.getItem("ptit_user") || "null");
 
   const fetchData = async () => {
     setLoading(true);
@@ -48,52 +51,61 @@ const ContractCancelRequestsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <h2 className="text-2xl font-bold text-red-700 mb-6">Yêu cầu hủy hợp đồng</h2>
-      {loading ? (
-        <div>Đang tải...</div>
-      ) : error ? (
-        <div className="text-red-600">{error}</div>
-      ) : (
-        <div className="bg-white rounded-xl shadow p-4">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 text-left">Mã hợp đồng</th>
-                <th className="p-3 text-left">Lý do</th>
-                <th className="p-3 text-left">Trạng thái</th>
-                <th className="p-3 text-left">Ghi chú quản lý</th>
-                <th className="p-3 text-center">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
-                  <td className="p-3 font-mono">{r.contract_id}</td>
-                  <td className="p-3">{r.reason}</td>
-                  <td className="p-3">
-                    {r.status === "pending" ? (
-                      <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Chờ duyệt</span>
-                    ) : r.status === "approved" ? (
-                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">Đã duyệt</span>
-                    ) : (
-                      <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full">Đã từ chối</span>
-                    )}
-                  </td>
-                  <td className="p-3">{r.manager_note || "—"}</td>
-                  <td className="p-3 text-center">
-                    {r.status === "pending" && (
-                      <Button size="sm" onClick={() => { setSelected(r); setModalOpen(true); }}>
-                        Duyệt
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header user={user} />
+      <div className="flex flex-1">
+        <Sidebar roles={user?.roles} />
+        <main className="flex-1 p-4 md:p-6 lg:p-8 ml-0 md:ml-60 transition-all duration-300">
+          <div className="bg-white rounded-2xl shadow p-6">
+            <h2 className="text-2xl font-bold text-red-700 mb-6">Yêu cầu hủy hợp đồng</h2>
+            {loading ? (
+              <div>Đang tải...</div>
+            ) : error ? (
+              <div className="text-red-600">{error}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-3 text-left">Mã hợp đồng</th>
+                      <th className="p-3 text-left">Lý do</th>
+                      <th className="p-3 text-left">Trạng thái</th>
+                      <th className="p-3 text-left">Ghi chú quản lý</th>
+                      <th className="p-3 text-center">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.map((r) => (
+                      <tr key={r.id} className="border-b last:border-0">
+                        <td className="p-3 font-mono">{r.contract_id}</td>
+                        <td className="p-3">{r.reason}</td>
+                        <td className="p-3">
+                          {r.status === "pending" ? (
+                            <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Chờ duyệt</span>
+                          ) : r.status === "approved" ? (
+                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">Đã duyệt</span>
+                          ) : (
+                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full">Đã từ chối</span>
+                          )}
+                        </td>
+                        <td className="p-3">{r.manager_note || "—"}</td>
+                        <td className="p-3 text-center">
+                          {r.status === "pending" && (
+                            <Button size="sm" onClick={() => { setSelected(r); setModalOpen(true); }}>
+                              Duyệt
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+
       {/* Modal duyệt */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>

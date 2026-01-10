@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, FileText, Loader2, UserPlus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { NotificationDialog } from "@/components/ui/notification-dialog";
 import { sendOtp, verifyOtp, submitDormApplication } from "@/features/auth/api";
 
 interface RegistrationModalProps {
@@ -63,7 +63,21 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [otpTries, setOtpTries] = useState(0);
-  const { toast } = useToast();
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    type: "success" | "error";
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    type: "error",
+  });
+
+  const showErrorNotification = (title: string, description: string) => {
+    setNotification({ open: true, title, description, type: "error" });
+  };
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -177,11 +191,7 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
       if (error instanceof Error) {
         message = error.message;
       }
-      toast({
-        variant: "destructive",
-        title: "Lỗi gửi OTP",
-        description: message,
-      });
+      showErrorNotification("Lỗi gửi OTP", message);
     } finally {
       setIsLoading(false);
     }
@@ -234,8 +244,13 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
           status: "pending",
           notes: formData.notes,
         };
-        await submitDormApplication(payload, resp.token);
-        setSuccessMsg("Đăng ký thành công! Hãy chờ kết quả của ban quản lý trong 3-5 ngày.");
+        const submitResp = await submitDormApplication(payload, resp.token);
+        const beMessage = (submitResp as any)?.message as string | undefined;
+        setSuccessMsg(
+          beMessage && beMessage.trim().length > 0
+            ? beMessage
+            : "Đăng ký thành công! Hãy chờ kết quả của ban quản lý trong 3-5 ngày."
+        );
         setFormData(initialState);
         setOtp('');
         setOtpToken('');
@@ -250,6 +265,7 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
       }
       setOtpError(message);
       setOtpTries((prev) => prev + 1);
+      showErrorNotification("Lỗi xác thực OTP", message);
     } finally {
       setIsLoading(false);
     }
@@ -594,6 +610,13 @@ const RegistrationModal = ({ isOpen, onClose }: RegistrationModalProps) => {
             )}
           </CardContent>
         </Card>
+        <NotificationDialog
+          open={notification.open}
+          onOpenChange={(open) => setNotification((prev) => ({ ...prev, open }))}
+          title={notification.title}
+          description={notification.description}
+          type={notification.type}
+        />
       </DialogContent>
     </Dialog>
   );

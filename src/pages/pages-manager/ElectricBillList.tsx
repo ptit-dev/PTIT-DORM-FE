@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import dormData from "@/assets/data.json";
 import {
   getElectricBills,
   createElectricBill,
@@ -16,12 +17,7 @@ const paymentMap: Record<string, string> = {
   paid: "Đã thanh toán",
 };
 
-const DORMS = [
-  { area_id: "B1", rooms: ["B1-101", "B1-102", "B1-103", "B1-104", "B1-105", "B1-106", "B1-107", "B1-108", "B1-109", "B1-110", "B1-201", "B1-202", "B1-203", "B1-204", "B1-205", "B1-206", "B1-207", "B1-208", "B1-209", "B1-210", "B1-301", "B1-302", "B1-303", "B1-304", "B1-305", "B1-306", "B1-307", "B1-308", "B1-309", "B1-310", "B1-401", "B1-402", "B1-403", "B1-404", "B1-405", "B1-406", "B1-407", "B1-408", "B1-409", "B1-410", "B1-501", "B1-502", "B1-503", "B1-504", "B1-505", "B1-506", "B1-507", "B1-508", "B1-509", "B1-510"] },
-  { area_id: "B2", rooms: ["B2-101", "B2-102", "B2-103", "B2-104", "B2-105", "B2-106", "B2-107", "B2-108", "B2-109", "B2-110", "B2-201", "B2-202", "B2-203", "B2-204", "B2-205", "B2-206", "B2-207", "B2-208", "B2-209", "B2-210", "B2-301", "B2-302", "B2-303", "B2-304", "B2-305", "B2-306", "B2-307", "B2-308", "B2-309", "B2-310", "B2-401", "B2-402", "B2-403", "B2-404", "B2-405", "B2-406", "B2-407", "B2-408", "B2-409", "B2-410", "B2-501", "B2-502", "B2-503", "B2-504", "B2-505", "B2-506", "B2-507", "B2-508", "B2-509", "B2-510"] },
-  { area_id: "B5", rooms: ["B5-101", "B5-102", "B5-103", "B5-104", "B5-105", "B5-106", "B5-107", "B5-108", "B5-109", "B5-110", "B5-201", "B5-202", "B5-203", "B5-204", "B5-205", "B5-206", "B5-207", "B5-208", "B5-209", "B5-210", "B5-301", "B5-302", "B5-303", "B5-304", "B5-305", "B5-306", "B5-307", "B5-308", "B5-309", "B5-310", "B5-401", "B5-402", "B5-403", "B5-404", "B5-405", "B5-406", "B5-407", "B5-408", "B5-409", "B5-410", "B5-501", "B5-502", "B5-503", "B5-504", "B5-505", "B5-506", "B5-507", "B5-508", "B5-509", "B5-510"] },
-  { area_id: "B0", rooms: ["B0-101", "B0-102", "B0-103", "B0-104", "B0-105", "B0-106", "B0-107", "B0-108", "B0-109", "B0-110", "B0-201", "B0-202", "B0-203", "B0-204", "B0-205", "B0-206", "B0-207", "B0-208", "B0-209", "B0-210", "B0-301", "B0-302", "B0-303", "B0-304", "B0-305", "B0-306", "B0-307", "B0-308", "B0-309", "B0-310", "B0-401", "B0-402", "B0-403", "B0-404", "B0-405", "B0-406", "B0-407", "B0-408", "B0-409", "B0-410", "B0-501", "B0-502", "B0-503", "B0-504", "B0-505", "B0-506", "B0-507", "B0-508", "B0-509", "B0-510"] },
-];
+const DORMS = dormData.dorms as Array<{ area_id: string; rooms: string[] }>;
 
 type ElectricBill = {
   id: string;
@@ -61,10 +57,6 @@ const ElectricBillList: React.FC = () => {
     month: '',
     prev_electric: null,
     curr_electric: null,
-    amount: null,
-    is_confirmed: false,
-    payment_status: '',
-    payment_proof: '',
   } as unknown as Partial<ElectricBill>);
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -197,25 +189,52 @@ const ElectricBillList: React.FC = () => {
       month: '',
       prev_electric: null,
       curr_electric: null,
-      amount: null,
-      is_confirmed: false,
-      payment_status: 'unpaid',
-      payment_proof: '',
     });
   };
   const openEdit = (bill: ElectricBill) => {
     setModal({ open: true, bill, mode: 'edit' });
-    setForm({ ...bill });
+    
+
+    let prevElectric = bill.prev_electric;
+    if (bill.month) {
+      const [year, month] = bill.month.split('-');
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
+      
+      let prevMonth = monthNum - 1;
+      let prevYear = yearNum;
+      if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear = yearNum - 1;
+      }
+      
+      const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      const prevBill = bills.find(b => b.room_id === bill.room_id && b.month === prevMonthStr);
+      
+      if (prevBill && prevBill.curr_electric) {
+        prevElectric = prevBill.curr_electric;
+      }
+    }
+    
+    setForm({ ...bill, prev_electric: prevElectric });
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (form.curr_electric !== null && form.prev_electric !== null && form.curr_electric < form.prev_electric) {
+      showNotification("Lỗi", "Số điện cuối kỳ phải >= số điện đầu kỳ", "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const submitData = { ...form };
-      delete submitData.area_id;
-      submitData.prev_electric = String(form.prev_electric) === '' || form.prev_electric === null ? null : parseInt(String(form.prev_electric), 10);
-      submitData.curr_electric = String(form.curr_electric) === '' || form.curr_electric === null ? null : parseInt(String(form.curr_electric), 10);
-      submitData.amount = String(form.amount) === '' || form.amount === null ? null : parseInt(String(form.amount), 10);
+      const submitData = {
+        room_id: form.room_id,
+        month: form.month,
+        prev_electric: Number(form.prev_electric),
+        curr_electric: Number(form.curr_electric),
+      };
+      
       if (modal.mode === 'add') {
         await createElectricBill(submitData);
         showNotification("Thành công", "Thêm hóa đơn thành công.", "success");
@@ -478,23 +497,46 @@ const ElectricBillList: React.FC = () => {
                       </select>
                     </div>
                     <input className="border rounded px-3 py-2" type="month" placeholder="Tháng" required value={form.month} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, month: e.target.value }))} disabled={submitting} />
-                    <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số cũ" required value={form.prev_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, prev_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
-                    <input className="border rounded px-3 py-2" type="number" placeholder="Chỉ số mới" required value={form.curr_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, curr_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
-                    <input className="border rounded px-3 py-2" type="number" placeholder="Số tiền" required value={form.amount ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, amount: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
-                    {modal.mode === 'edit' && (
-                      <>
-                        <div className="flex flex-col gap-2 md:col-span-2">
-                          <label className="font-medium text-gray-700">Trạng thái thanh toán</label>
-                          <select className="border rounded px-3 py-2" value={form.payment_status} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, payment_status: e.target.value as 'unpaid' | 'paid' }))} disabled={submitting}>
-                            <option value="">-- Chọn trạng thái --</option>
-                            <option value="unpaid">Chưa thanh toán</option>
-                            <option value="paid">Đã thanh toán</option>
-                          </select>
-                        </div>
-                        <input className="border rounded px-3 py-2 md:col-span-2" placeholder="Link minh chứng thanh toán (nếu có)" value={form.payment_proof} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, payment_proof: e.target.value }))} disabled={submitting} />
-                      </>
-                    )}
+                    <input className="border rounded px-3 py-2" type="number" min="0" placeholder="Chỉ số cũ (kWh)" required value={form.prev_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, prev_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
+                    <input className="border rounded px-3 py-2" type="number" min="0" placeholder="Chỉ số mới (kWh)" required value={form.curr_electric ?? ''} onChange={e => setForm((f: Partial<ElectricBill>) => ({ ...f, curr_electric: e.target.value === '' ? null : Number(e.target.value) }))} disabled={submitting} />
                   </div>
+
+                  {form.prev_electric !== null && form.prev_electric !== undefined && form.curr_electric !== null && form.curr_electric !== undefined && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                      <h4 className="font-bold text-red-700 mb-3">Chi tiết tính toán tiền điện:</h4>
+                      {(() => {
+                        const usage = (form.curr_electric || 0) - (form.prev_electric || 0);
+                        const tier2 = Math.min(Math.max(usage - 100, 0), 50);
+                        const tier3 = Math.max(usage - 150, 0);
+                        const amount = tier2 * 2000 + tier3 * 3000;
+                        
+                        return (
+                          <>
+                            <div className="space-y-1 text-sm text-gray-700">
+                              <p>• Sử dụng: <span className="font-semibold text-lg text-red-700">{usage} kWh</span></p>
+                              {usage <= 100 && (
+                                <p className="text-green-600 font-medium">• 1-100 kWh: Miễn phí ✓</p>
+                              )}
+                              {usage > 100 && (
+                                <>
+                                  <p>• 1-100 kWh: Miễn phí (0đ)</p>
+                                  <p>• 101-{100 + tier2} kWh: {tier2} kWh × 2,000đ = <span className="font-semibold">{(tier2 * 2000).toLocaleString('vi-VN')}đ</span></p>
+                                  {tier3 > 0 && (
+                                    <p>• 151+ kWh: {tier3} kWh × 3,000đ = <span className="font-semibold">{(tier3 * 3000).toLocaleString('vi-VN')}đ</span></p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <div className="border-t-2 border-red-200 pt-3 mt-3">
+                              <p className="font-bold text-red-700">Tổng tiền: <span className="text-2xl text-red-700">{amount.toLocaleString('vi-VN')}đ</span></p>
+                              <p className="text-xs text-gray-500 mt-1">* Backend sẽ tự tính, giá trị hiển thị chỉ mang tính tham khảo</p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   <div className="flex justify-end gap-3 mt-6">
                     <button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300" onClick={() => setModal({ open: false, mode: 'add' })} disabled={submitting}>Hủy</button>
                     <button type="submit" className="px-6 py-2 rounded bg-red-700 text-white font-semibold hover:bg-red-800 transition" disabled={submitting}>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Eye, EyeOff, Copy, Check, FileText, ZoomIn, ArrowLeft, CreditCard, XCircle, Calendar, User, Home, Phone, Mail, MapPin, Award, GraduationCap, Building } from "lucide-react";
 import { confirmContract } from "@/features/auth/studentContractApi";
 import { useToast } from "@/hooks/use-toast";
+import { createContractCancelRequest } from "@/features/auth/contractCancelApi";
 import ContractPreview from "./ContractForm";
 import { Contract, NullableStringFromDB } from "@/model/Contract";
 
@@ -108,18 +109,23 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 		}
 	};
 
-	const handleSubmitCancelRequest = () => {
+	const handleSubmitCancelRequest = async () => {
 		if (!cancelReason.trim()) {
 			setCancelError("Vui lòng nhập lý do muốn hủy hợp đồng.");
 			return;
 		}
 		setCancelSubmitting(true);
 		setCancelError(null);
-		setTimeout(() => {
-			const created: LocalCancelRequest = {
+		try {
+			const createdApi = await createContractCancelRequest({
 				contract_id: String(contract.id),
-				status: "pending",
 				reason: cancelReason.trim(),
+			});
+			const created: LocalCancelRequest = {
+				contract_id: createdApi.contract_id,
+				status: createdApi.status,
+				reason: createdApi.reason,
+				manager_note: createdApi.manager_note,
 			};
 			onCancelRequestSubmit(created);
 			toast({
@@ -127,9 +133,22 @@ const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 				description: "Yêu cầu hủy hợp đồng đã được gửi. Vui lòng chờ quản lý duyệt.",
 				duration: 4000,
 			});
-			setCancelSubmitting(false);
 			setActiveTab("detail");
-		}, 800);
+		} catch (error: unknown) {
+			let message = "Không thể gửi yêu cầu hủy hợp đồng.";
+			if (error instanceof Error && error.message) {
+				message = error.message;
+			}
+			setCancelError(message);
+			toast({
+				title: "Lỗi!",
+				description: message,
+				variant: "destructive",
+				duration: 4000,
+			});
+		} finally {
+			setCancelSubmitting(false);
+		}
 	};
 
 	const currentCancelRequest = cancelRequests.find((req) => req.contract_id === String(contract.id));

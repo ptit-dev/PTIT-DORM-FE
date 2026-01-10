@@ -80,6 +80,7 @@ const MENU_CONFIG = {
     { to: "/registration-period", icon: FileText, label: "Thời gian đăng ký" },
     { to: "/application-list", icon: FileText, label: "Thông tin nguyện vọng" },
     { to: "/contract-list", icon: FileText, label: "Danh sách hợp đồng" },
+    { to: "/contract-cancel-requests", icon: FileText, label: "Yêu cầu hủy hợp đồng" },
     { to: "/manage-rooms", icon: FileText, label: "Quản lý phòng ở" },
     { to: "/room-transfer-requests", icon: Layers, label: "Yêu cầu chuyển phòng" },
     { to: "/facility-complaints", icon: Layers, label: "Khiếu nại CSVC" },
